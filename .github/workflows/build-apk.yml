@@ -24,7 +24,10 @@ jobs:
           npm init -y
           npm install @capacitor/core @capacitor/cli @capacitor/android
           npx cap init "A2 Mess Hub" "com.a2messhub.app" --web-dir=www
-          cp -r ../www ./www
+          mkdir -p www
+          cp -r ../www/. ./www/
+          test -f www/index.html
+          test -f www/app.html
           npx cap add android
           npx cap sync android
       - name: Build APK
@@ -34,5 +37,5 @@ jobs:
           ./gradlew assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: A2-Mess-Hub-V2-APK
+          name: A2-Mess-Hub-V3-FIXED-APK
           path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
