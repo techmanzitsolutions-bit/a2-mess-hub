@@ -3,14 +3,30 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn(){ return request.auth != null; }
     function me(){ return get(/databases/$(database)/documents/users/$(request.auth.uid)); }
-    function role(){ return signedIn() ? me().data.role : null; }
+    function role(){ return signedIn() && me().exists() ? me().data.role : null; }
     function admin(){ return signedIn() && role() == 'admin'; }
     function chef(){ return signedIn() && role() == 'chef'; }
-    function member(){ return signedIn() && role() == 'member'; }
+    function initialized(){ return exists(/databases/$(database)/documents/system/config); }
+
+    match /system/config {
+      allow read: if true;
+      allow create: if signedIn()
+                    && !initialized()
+                    && request.resource.data.ownerUid == request.auth.uid
+                    && request.resource.data.initialized == true;
+      allow update, delete: if admin();
+    }
 
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || admin());
-      allow create, update, delete: if admin();
+      allow create: if admin()
+                    || (signedIn()
+                        && request.auth.uid == uid
+                        && !initialized()
+                        && request.resource.data.role == 'admin'
+                        && request.resource.data.active == true);
+      allow update: if admin();
+      allow delete: if admin() && uid != request.auth.uid;
     }
 
     match /members/{id} {
@@ -41,8 +57,7 @@ service cloud.firestore {
       allow write: if admin();
     }
     match /notifications/{id} {
-      allow read: if admin();
-      allow create: if admin();
+      allow read, create: if admin();
       allow update, delete: if false;
     }
   }
