@@ -17,6 +17,19 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
+      - name: Verify web app source
+        run: |
+          test -f www/index.html
+          test -f www/app.html
+          grep -q "app.html" www/index.html
+          grep -q "A2MessHubDB" www/app.html
+          grep -q "Create Account" www/app.html
+          grep -q "function members" www/app.html
+          grep -q "function inventory" www/app.html
+          grep -q "function meals" www/app.html
+          grep -q "function expenses" www/app.html
+          grep -q "function payments" www/app.html
+          ! grep -q "url=./index.html" www/app.html
       - name: Create Android project
         run: |
           mkdir mobile
@@ -30,6 +43,11 @@ jobs:
           test -f www/app.html
           npx cap add android
           npx cap sync android
+      - name: Verify packaged web assets
+        run: |
+          test -f mobile/android/app/src/main/assets/public/index.html
+          test -f mobile/android/app/src/main/assets/public/app.html
+          grep -q "A2MessHubDB" mobile/android/app/src/main/assets/public/app.html
       - name: Build APK
         run: |
           cd mobile/android
@@ -37,5 +55,5 @@ jobs:
           ./gradlew assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: A2-Mess-Hub-V3-FIXED-APK
+          name: A2-Mess-Hub-V3-AUDITED-APK
           path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
