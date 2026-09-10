@@ -26,7 +26,9 @@ jobs:
           grep -q "firebaseConfig" www/app.html
           grep -q "a2-mess-hub" www/app.html
           grep -q "No public signup" www/app.html
-          grep -q "createManagedUser" www/app.html
+          grep -q "creatorAuth" www/app.html
+          grep -q "Uploadcare" www/app.html
+          grep -q "uploadBill" www/app.html
           grep -q "Bill photo" www/app.html
           grep -q "WhatsApp" www/app.html
           ! grep -q "A2MessHubDB" www/app.html
@@ -50,6 +52,7 @@ jobs:
           test -f mobile/android/app/google-services.json
           grep -q "firebaseConfig" mobile/android/app/src/main/assets/public/app.html
           grep -q "No public signup" mobile/android/app/src/main/assets/public/app.html
+          grep -q "Uploadcare" mobile/android/app/src/main/assets/public/app.html
       - name: Build APK
         run: |
           cd mobile/android
@@ -57,5 +60,5 @@ jobs:
           ./gradlew assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: A2-Mess-Hub-V4-FIREBASE-APK
+          name: A2-Mess-Hub-V4-LIVE-PHOTO-APK
           path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
