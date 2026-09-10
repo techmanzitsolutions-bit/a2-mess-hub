@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "451214844236",
+    "project_id": "a2-mess-hub",
+    "storage_bucket": "a2-mess-hub.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:451214844236:android:546b7783ecf04e40af6fe9",
+        "android_client_info": {
+          "package_name": "com.a2messhub.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDOUJGSLfDrmmc74YUGRkDU1b4P2gYmGyU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
