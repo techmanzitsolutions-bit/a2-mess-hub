@@ -45,7 +45,7 @@ service cloud.firestore {
       allow delete: if admin();
     }
     match /expenses/{id} {
-      allow read: if signedIn() && (admin() || chef());
+      allow read: if signedIn();
       allow create: if signedIn() && (admin() || chef());
       allow update, delete: if admin();
     }
