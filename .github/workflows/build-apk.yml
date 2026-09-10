@@ -1,98 +1,10 @@
-name: Build Android APK
+name: Build Android APK (legacy debug)
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
 
 jobs:
-  build:
+  legacy-debug:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
-      - name: Verify Firebase V4 source
-        run: |
-          test -f www/index.html
-          test -f www/app.html
-          test -f www/mobile-fixes.css
-          test -f firebase/google-services.json
-          grep -q "app.html" www/index.html
-          grep -q "firebaseConfig" www/app.html
-          grep -q "a2-mess-hub" www/app.html
-          grep -q "No public signup" www/app.html
-          grep -q "creatorAuth" www/app.html
-          grep -q "Uploadcare" www/app.html
-          grep -q "uploadBill" www/app.html
-          grep -q "Bill photo" www/app.html
-          grep -q "WhatsApp" www/app.html
-          ! grep -q "A2MessHubDB" www/app.html
-          ! grep -q "Create Account" www/app.html
-      - name: Create Android project
-        run: |
-          mkdir mobile
-          cd mobile
-          npm init -y
-          npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap init "A2 Mess Hub" "com.a2messhub.app" --web-dir=www
-          mkdir -p www
-          cp -r ../www/. ./www/
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('www/app.html')
-          s=p.read_text()
-          if 'mobile-fixes.css' not in s:
-              s=s.replace('</head>','<link rel="stylesheet" href="mobile-fixes.css">\n</head>')
-          s=s.replace("fd.append('UPLOADCARE_STORE','auto')","fd.append('UPLOADCARE_STORE','1')")
-          old="const j=await res.json(),uuid=j.file||Object.values(j).find(v=>typeof v==='string'&&v.length>10);if(!uuid)throw new Error('Upload completed but no photo ID returned');return{billUrl:`https://ucarecdn.com/${uuid}/`,billFileId:uuid}"
-          new="const j=await res.json(),raw=String(j.file||'').trim(),m=raw.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i),uuid=m?.[0];if(!uuid)throw new Error('Upload completed but Uploadcare returned an invalid photo ID');const billUrl=`https://bo3lvwuicj.ucarecd.net/${uuid}/`;return{billUrl,billFileId:uuid}"
-          if old in s:
-              s=s.replace(old,new)
-          else:
-              s=s.replace('https://ucarecdn.com/${uuid}/','https://bo3lvwuicj.ucarecd.net/${uuid}/')
-          if "UPLOADCARE_STORE','1'" not in s or "bo3lvwuicj.ucarecd.net" not in s or "invalid photo ID" not in s:
-              raise SystemExit('Uploadcare CDN patch target not found')
-
-          old_dash="function dashboard(){const paid=state.data.payments.reduce((a,x)=>a+(x.status==='PAID'?Number(x.amount||0):0),0),exp=state.data.expenses.reduce((a,x)=>a+Number(x.amount||0),0);return`<div class=grid>${metric('Members',state.data.members.length)}${metric('Collected','AED '+paid.toFixed(0))}${metric('Expenses','AED '+exp.toFixed(0))}${metric('Balance','AED '+(paid-exp).toFixed(0))}</div>`}"
-          new_dash=r'''function dashboard(){if(state.profile.role==='member'){const uid=auth.currentUser.uid,ownPayments=state.data.payments.filter(x=>x.uid===uid),member=state.data.members.find(x=>(x.uid||x.id)===uid)||{},planAmount=Number(String(member.plan||'').replace(/[^0-9.]/g,''))||0,totalReceivable=ownPayments.reduce((a,x)=>a+Number(x.amount||0),0)||planAmount,paid=ownPayments.reduce((a,x)=>a+(x.status==='PAID'?Number(x.amount||0):0),0),due=Math.max(totalReceivable-paid,0),totalExpense=state.data.expenses.reduce((a,x)=>a+Number(x.amount||0),0),cats={};state.data.expenses.forEach(x=>{const k=x.category||'General';cats[k]=(cats[k]||0)+Number(x.amount||0)});const entries=Object.entries(cats).sort((a,b)=>b[1]-a[1]),max=Math.max(1,...entries.map(x=>x[1])),progress=totalReceivable?Math.min(100,(paid/totalReceivable)*100):0;return`<div class=grid>${metric('Total Receivable','AED '+totalReceivable.toFixed(2))}${metric('You Paid','AED '+paid.toFixed(2))}${metric('Balance Due','AED '+due.toFixed(2))}${metric('Total Mess Expense','AED '+totalExpense.toFixed(2))}</div><div class=card style="margin-top:12px"><div class=top><div><h3 style="margin:0">Payment Progress</h3><div class=small>Read only</div></div><b>${progress.toFixed(0)}%</b></div><div style="height:12px;background:#ffffff10;border-radius:99px;overflow:hidden;margin-top:12px"><div style="height:100%;width:${progress}%;background:linear-gradient(90deg,#45f0a6,#f6cb67);border-radius:99px"></div></div></div><div class=card style="margin-top:12px"><div class=top><div><h3 style="margin:0">Expense Chart</h3><div class=small>Mess expenses by category · view only</div></div><b>AED ${totalExpense.toFixed(2)}</b></div><div class=list style="margin-top:14px">${entries.length?entries.map(([name,val])=>`<div><div class=top style="font-size:13px"><span>${esc(name)}</span><b>AED ${val.toFixed(2)}</b></div><div style="height:10px;background:#ffffff10;border-radius:99px;overflow:hidden;margin-top:6px"><div style="height:100%;width:${Math.max(4,(val/max)*100)}%;background:linear-gradient(90deg,#45f0a6,#f6cb67);border-radius:99px"></div></div></div>`).join(''):'<p class=muted>No expenses recorded yet.</p>'}</div></div>`}const paid=state.data.payments.reduce((a,x)=>a+(x.status==='PAID'?Number(x.amount||0):0),0),exp=state.data.expenses.reduce((a,x)=>a+Number(x.amount||0),0);return`<div class=grid>${metric('Members',state.data.members.length)}${metric('Collected','AED '+paid.toFixed(0))}${metric('Expenses','AED '+exp.toFixed(0))}${metric('Balance','AED '+(paid-exp).toFixed(0))}</div>`}'''
-          if old_dash not in s:
-              raise SystemExit('Dashboard patch target not found')
-          s=s.replace(old_dash,new_dash)
-          p.write_text(s)
-          PY
-          npx cap add android
-          cp ../firebase/google-services.json android/app/google-services.json
-          npx cap sync android
-      - name: Verify packaged web assets
-        run: |
-          test -f mobile/android/app/src/main/assets/public/index.html
-          test -f mobile/android/app/src/main/assets/public/app.html
-          test -f mobile/android/app/src/main/assets/public/mobile-fixes.css
-          test -f mobile/android/app/google-services.json
-          grep -q "firebaseConfig" mobile/android/app/src/main/assets/public/app.html
-          grep -q "No public signup" mobile/android/app/src/main/assets/public/app.html
-          grep -q "Uploadcare" mobile/android/app/src/main/assets/public/app.html
-          grep -q "mobile-fixes.css" mobile/android/app/src/main/assets/public/app.html
-          grep -q "UPLOADCARE_STORE','1'" mobile/android/app/src/main/assets/public/app.html
-          grep -q "invalid photo ID" mobile/android/app/src/main/assets/public/app.html
-          grep -q "bo3lvwuicj.ucarecd.net" mobile/android/app/src/main/assets/public/app.html
-          grep -q "Total Receivable" mobile/android/app/src/main/assets/public/app.html
-          grep -q "Payment Progress" mobile/android/app/src/main/assets/public/app.html
-          grep -q "Expense Chart" mobile/android/app/src/main/assets/public/app.html
-          grep -q "view only" mobile/android/app/src/main/assets/public/app.html
-          ! grep -q "https://ucarecdn.com/" mobile/android/app/src/main/assets/public/app.html
-      - name: Build APK
-        run: |
-          cd mobile/android
-          chmod +x gradlew
-          ./gradlew assembleDebug
-      - uses: actions/upload-artifact@v4
-        with:
-          name: A2-Mess-Hub-V4-MEMBER-DASHBOARD-APK
-          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+      - run: echo "Legacy debug workflow disabled for automatic builds. Use the stable release workflow instead."
