@@ -64,17 +64,59 @@ jobs:
 
       - name: Sign with permanent A2 MESS HUB key
         env:
-          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          STORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEYSTORE_B64_RAW: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASS_RAW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS_RAW: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS_RAW: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          printf '%s' "$KEYSTORE_B64" | base64 -d > /tmp/a2messhub.jks
+          python - <<'PY'
+          import os, re, unicodedata, base64
+          from pathlib import Path
+
+          def clean(name, prefixes=()):
+              s = unicodedata.normalize('NFKC', os.environ.get(name, ''))
+              s = ''.join(ch for ch in s if unicodedata.category(ch) != 'Cf')
+              s = s.replace('\r','').replace('\n','').strip()
+              for prefix in prefixes:
+                  if s.lower().startswith(prefix.lower()):
+                      s = s[len(prefix):].strip()
+              s = s.strip(' \t\"\'“”‘’')
+              return s
+
+          store = clean('STORE_PASS_RAW', ('Store password:', 'ANDROID_KEYSTORE_PASSWORD='))
+          keypass = clean('KEY_PASS_RAW', ('Key password:', 'ANDROID_KEY_PASSWORD='))
+          alias = clean('KEY_ALIAS_RAW', ('Alias:', 'ANDROID_KEY_ALIAS='))
+          b64 = clean('KEYSTORE_B64_RAW', ('ANDROID_KEYSTORE_BASE64=',))
+          b64 = re.sub(r'\s+', '', b64)
+
+          for label, value in [('keystore password', store), ('key password', keypass), ('key alias', alias)]:
+              if not value:
+                  raise SystemExit(f'{label} secret is empty')
+              if not value.isascii():
+                  raise SystemExit(f'{label} secret still contains non-ASCII characters; re-enter the plain value only')
+
+          try:
+              raw = base64.b64decode(b64, validate=True)
+          except Exception as e:
+              raise SystemExit(f'keystore Base64 secret is invalid: {e}')
+          if not raw:
+              raise SystemExit('decoded keystore is empty')
+
+          Path('/tmp/a2messhub.jks').write_bytes(raw)
+          Path('/tmp/store-pass').write_text(store)
+          Path('/tmp/key-pass').write_text(keypass)
+          Path('/tmp/key-alias').write_text(alias)
+          print('Signing secrets normalized and validated without exposing values.')
+          PY
+
+          export STORE_PASS="$(cat /tmp/store-pass)"
+          export KEY_PASS="$(cat /tmp/key-pass)"
+          export KEY_ALIAS="$(cat /tmp/key-alias)"
           TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           "$TOOLS/zipalign" -f -p 4 mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk /tmp/a2-aligned.apk
           "$TOOLS/apksigner" sign --ks /tmp/a2messhub.jks --ks-key-alias "$KEY_ALIAS" --ks-pass env:STORE_PASS --key-pass env:KEY_PASS --out mobile/android/app/build/outputs/apk/release/A2-MESS-HUB-STABLE.apk /tmp/a2-aligned.apk
           "$TOOLS/apksigner" verify --verbose --print-certs mobile/android/app/build/outputs/apk/release/A2-MESS-HUB-STABLE.apk
-          rm -f /tmp/a2messhub.jks /tmp/a2-aligned.apk
+          rm -f /tmp/a2messhub.jks /tmp/a2-aligned.apk /tmp/store-pass /tmp/key-pass /tmp/key-alias
 
       - uses: actions/upload-artifact@v4
         with:
