@@ -1,77 +1,10 @@
-name: Build Android APK Photo Fix
+name: Build Android APK Photo Fix (legacy debug)
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
 
 jobs:
-  build:
+  legacy-debug:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
-      - name: Create Android project
-        run: |
-          mkdir mobile
-          cd mobile
-          npm init -y
-          npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap init "A2 Mess Hub" "com.a2messhub.app" --web-dir=www
-          mkdir -p www
-          cp -r ../www/. ./www/
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('www/app.html')
-          s=p.read_text()
-          if 'mobile-fixes.css' not in s:
-              s=s.replace('</head>','<link rel="stylesheet" href="mobile-fixes.css">\n</head>')
-          s=s.replace("fd.append('UPLOADCARE_STORE','auto')","fd.append('UPLOADCARE_STORE','1')")
-          old_upload="const j=await res.json(),uuid=j.file||Object.values(j).find(v=>typeof v==='string'&&v.length>10);if(!uuid)throw new Error('Upload completed but no photo ID returned');return{billUrl:`https://ucarecdn.com/${uuid}/`,billFileId:uuid}"
-          new_upload="const j=await res.json(),raw=String(j.file||'').trim(),m=raw.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i),uuid=m?.[0];if(!uuid)throw new Error('Upload completed but Uploadcare returned an invalid photo ID');const billUrl=`https://bo3lvwuicj.ucarecd.net/${uuid}/`;return{billUrl,billFileId:uuid}"
-          if old_upload in s:
-              s=s.replace(old_upload,new_upload)
-          else:
-              s=s.replace('https://ucarecdn.com/${uuid}/','https://bo3lvwuicj.ucarecd.net/${uuid}/')
-
-          old_dash="function dashboard(){const paid=state.data.payments.reduce((a,x)=>a+(x.status==='PAID'?Number(x.amount||0):0),0),exp=state.data.expenses.reduce((a,x)=>a+Number(x.amount||0),0);return`<div class=grid>${metric('Members',state.data.members.length)}${metric('Collected','AED '+paid.toFixed(0))}${metric('Expenses','AED '+exp.toFixed(0))}${metric('Balance','AED '+(paid-exp).toFixed(0))}</div>`}"
-          new_dash=r'''function dashboard(){if(state.profile.role==='member'){const uid=auth.currentUser.uid,ownPayments=state.data.payments.filter(x=>x.uid===uid),member=state.data.members.find(x=>(x.uid||x.id)===uid)||{},planAmount=Number(String(member.plan||'').replace(/[^0-9.]/g,''))||0,totalReceivable=ownPayments.reduce((a,x)=>a+Number(x.amount||0),0)||planAmount,paid=ownPayments.reduce((a,x)=>a+(x.status==='PAID'?Number(x.amount||0):0),0),due=Math.max(totalReceivable-paid,0),totalExpense=state.data.expenses.reduce((a,x)=>a+Number(x.amount||0),0),cats={};state.data.expenses.forEach(x=>{const k=x.category||'General';cats[k]=(cats[k]||0)+Number(x.amount||0)});const entries=Object.entries(cats).sort((a,b)=>b[1]-a[1]),max=Math.max(1,...entries.map(x=>x[1])),progress=totalReceivable?Math.min(100,(paid/totalReceivable)*100):0;return`<div class=grid>${metric('Total Receivable','AED '+totalReceivable.toFixed(2))}${metric('You Paid','AED '+paid.toFixed(2))}${metric('Balance Due','AED '+due.toFixed(2))}${metric('Total Mess Expense','AED '+totalExpense.toFixed(2))}</div><div class=card style="margin-top:12px"><div class=top><div><h3 style="margin:0">Payment Progress</h3><div class=small>Read only</div></div><b>${progress.toFixed(0)}%</b></div><div style="height:12px;background:#ffffff10;border-radius:99px;overflow:hidden;margin-top:12px"><div style="height:100%;width:${progress}%;background:linear-gradient(90deg,#45f0a6,#f6cb67);border-radius:99px"></div></div></div><div class=card style="margin-top:12px"><div class=top><div><h3 style="margin:0">Expense Chart</h3><div class=small>Mess expenses by category · view only</div></div><b>AED ${totalExpense.toFixed(2)}</b></div><div class=list style="margin-top:14px">${entries.length?entries.map(([name,val])=>`<div><div class=top style="font-size:13px"><span>${esc(name)}</span><b>AED ${val.toFixed(2)}</b></div><div style="height:10px;background:#ffffff10;border-radius:99px;overflow:hidden;margin-top:6px"><div style="height:100%;width:${Math.max(4,(val/max)*100)}%;background:linear-gradient(90deg,#45f0a6,#f6cb67);border-radius:99px"></div></div></div>`).join(''):'<p class=muted>No expenses recorded yet.</p>'}</div></div>`}const paid=state.data.payments.reduce((a,x)=>a+(x.status==='PAID'?Number(x.amount||0):0),0),exp=state.data.expenses.reduce((a,x)=>a+Number(x.amount||0),0);return`<div class=grid>${metric('Members',state.data.members.length)}${metric('Collected','AED '+paid.toFixed(0))}${metric('Expenses','AED '+exp.toFixed(0))}${metric('Balance','AED '+(paid-exp).toFixed(0))}</div>`}'''
-          if old_dash in s:
-              s=s.replace(old_dash,new_dash)
-
-          marker="window.billImageError=img=>{img.style.display='none';const a=img.parentElement;if(a){a.textContent='View Bill Photo';a.className='billlink'}};"
-          helper="function resolvedBillUrl(x){const raw=String(x?.billFileId||x?.billUrl||'');const m=raw.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);return m?`https://bo3lvwuicj.ucarecd.net/${m[0]}/`:String(x?.billUrl||'').replace('https://ucarecdn.com/','https://bo3lvwuicj.ucarecd.net/')}\n"+marker
-          if 'function resolvedBillUrl(x)' not in s:
-              if marker not in s: raise SystemExit('billImageError marker not found')
-              s=s.replace(marker,helper)
-          s=s.replace("${x.billUrl?`<br><a href=\"${esc(x.billUrl)}\" target=_blank rel=noopener><img class=billimg src=\"${esc(x.billUrl)}-/preview/300x300/\" alt=\"Bill photo\" onerror=\"billImageError(this)\"></a><br><a class=billlink href=\"${esc(x.billUrl)}\" target=_blank rel=noopener>View Bill</a>`:''}","${(x.billUrl||x.billFileId)?`<br><a href=\"${esc(resolvedBillUrl(x))}\" target=_blank rel=noopener><img class=billimg src=\"${esc(resolvedBillUrl(x))}-/preview/300x300/\" alt=\"Bill photo\" onerror=\"billImageError(this)\"></a><br><a class=billlink href=\"${esc(resolvedBillUrl(x))}\" target=_blank rel=noopener>View Bill</a>`:''}")
-          s=s.replace("x.billUrl?x.billUrl+'-/preview/800x800/':''","resolvedBillUrl(x)?resolvedBillUrl(x)+'-/preview/800x800/':''")
-          s=s.replace("${x.billUrl?'show':''}","${(x.billUrl||x.billFileId)?'show':''}")
-          if 'resolvedBillUrl(x)' not in s or 'bo3lvwuicj.ucarecd.net' not in s:
-              raise SystemExit('legacy bill photo normalization missing')
-          p.write_text(s)
-          PY
-          npx cap add android
-          cp ../firebase/google-services.json android/app/google-services.json
-          npx cap sync android
-      - name: Verify photo fix
-        run: |
-          grep -q "function resolvedBillUrl(x)" mobile/android/app/src/main/assets/public/app.html
-          grep -q "bo3lvwuicj.ucarecd.net" mobile/android/app/src/main/assets/public/app.html
-          grep -q "billFileId" mobile/android/app/src/main/assets/public/app.html
-          grep -q "Total Receivable" mobile/android/app/src/main/assets/public/app.html
-      - name: Build APK
-        run: |
-          cd mobile/android
-          chmod +x gradlew
-          ./gradlew assembleDebug
-      - uses: actions/upload-artifact@v4
-        with:
-          name: A2-Mess-Hub-V4-EXPENSE-PHOTO-FIX-APK
-          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+      - run: echo "Legacy debug workflow disabled for automatic builds. Use the permanent signed release pipeline."
