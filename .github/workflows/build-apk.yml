@@ -47,17 +47,17 @@ jobs:
           from pathlib import Path
           p=Path('www/app.html')
           s=p.read_text()
-          # Load global responsive styles in the packaged APK.
           if 'mobile-fixes.css' not in s:
               s=s.replace('</head>','<link rel="stylesheet" href="mobile-fixes.css">\n</head>')
-          # Uploadcare: force permanent storage and accept only a valid UUID.
           s=s.replace("fd.append('UPLOADCARE_STORE','auto')","fd.append('UPLOADCARE_STORE','1')")
           old="const j=await res.json(),uuid=j.file||Object.values(j).find(v=>typeof v==='string'&&v.length>10);if(!uuid)throw new Error('Upload completed but no photo ID returned');return{billUrl:`https://ucarecdn.com/${uuid}/`,billFileId:uuid}"
-          new="const j=await res.json(),raw=String(j.file||'').trim(),m=raw.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i),uuid=m?.[0];if(!uuid)throw new Error('Upload completed but Uploadcare returned an invalid photo ID');const billUrl=`https://ucarecdn.com/${uuid}/`;return{billUrl,billFileId:uuid}"
+          new="const j=await res.json(),raw=String(j.file||'').trim(),m=raw.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i),uuid=m?.[0];if(!uuid)throw new Error('Upload completed but Uploadcare returned an invalid photo ID');const billUrl=`https://bo3lvwuicj.ucarecd.net/${uuid}/`;return{billUrl,billFileId:uuid}"
           if old in s:
               s=s.replace(old,new)
-          elif "UPLOADCARE_STORE','1'" not in s or "invalid photo ID" not in s:
-              raise SystemExit('Uploadcare patch target not found')
+          else:
+              s=s.replace('https://ucarecdn.com/${uuid}/','https://bo3lvwuicj.ucarecd.net/${uuid}/')
+          if "UPLOADCARE_STORE','1'" not in s or "bo3lvwuicj.ucarecd.net" not in s or "invalid photo ID" not in s:
+              raise SystemExit('Uploadcare CDN patch target not found')
           p.write_text(s)
           PY
           npx cap add android
@@ -75,6 +75,8 @@ jobs:
           grep -q "mobile-fixes.css" mobile/android/app/src/main/assets/public/app.html
           grep -q "UPLOADCARE_STORE','1'" mobile/android/app/src/main/assets/public/app.html
           grep -q "invalid photo ID" mobile/android/app/src/main/assets/public/app.html
+          grep -q "bo3lvwuicj.ucarecd.net" mobile/android/app/src/main/assets/public/app.html
+          ! grep -q "https://ucarecdn.com/" mobile/android/app/src/main/assets/public/app.html
       - name: Build APK
         run: |
           cd mobile/android
@@ -82,5 +84,5 @@ jobs:
           ./gradlew assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: A2-Mess-Hub-V4-RESPONSIVE-PHOTO-FIX-APK
+          name: A2-Mess-Hub-V4-UPLOADCARE-CDN-FIX-APK
           path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
