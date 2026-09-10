@@ -1,0 +1,83 @@
+name: Build A2 MESS HUB Stable Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Prepare latest A2 MESS HUB Android project
+        run: |
+          git show adc9c41d296912d71f147431aaf636fbe80b9602:.github/workflows/build-expense-columns.yml > /tmp/feature-build.yml
+          python - <<'PY'
+          from pathlib import Path
+          lines=Path('/tmp/feature-build.yml').read_text().splitlines()
+          start=next(i for i,x in enumerate(lines) if x.strip()=='- name: Create Android project')
+          run=next(i for i in range(start+1,len(lines)) if lines[i].strip()=='run: |')
+          end=next(i for i in range(run+1,len(lines)) if lines[i].startswith('      - name: Verify expense columns'))
+          body='\n'.join(x[10:] if x.startswith('          ') else x for x in lines[run+1:end])+'\n'
+          Path('/tmp/prepare-android.sh').write_text(body)
+          PY
+          bash /tmp/prepare-android.sh
+
+      - name: Set update version
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import os,re
+          p=Path('mobile/android/app/build.gradle')
+          s=p.read_text()
+          code=20000+int(os.environ['GITHUB_RUN_NUMBER'])
+          s,n=re.subn(r'versionCode\s+\d+',f'versionCode {code}',s,count=1)
+          if n!=1: raise SystemExit('versionCode patch failed')
+          s,n=re.subn(r'versionName\s+"[^"]+"',f'versionName "4.{os.environ["GITHUB_RUN_NUMBER"]}"',s,count=1)
+          if n!=1: raise SystemExit('versionName patch failed')
+          p.write_text(s)
+          print('versionCode',code)
+          PY
+
+      - name: Verify required features
+        run: |
+          grep -q "Expense Name" mobile/android/app/src/main/assets/public/app.html
+          grep -q "Added By" mobile/android/app/src/main/assets/public/app.html
+          grep -q "Read only" mobile/android/app/src/main/assets/public/app.html
+          grep -q "Total Receivable" mobile/android/app/src/main/assets/public/app.html
+          grep -q "bo3lvwuicj.ucarecd.net" mobile/android/app/src/main/assets/public/app.html
+
+      - name: Build release APK
+        run: |
+          cd mobile/android
+          chmod +x gradlew
+          ./gradlew assembleRelease
+
+      - name: Sign with permanent A2 MESS HUB key
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          printf '%s' "$KEYSTORE_B64" | base64 -d > /tmp/a2messhub.jks
+          TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$TOOLS/zipalign" -f -p 4 mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk /tmp/a2-aligned.apk
+          "$TOOLS/apksigner" sign --ks /tmp/a2messhub.jks --ks-key-alias "$KEY_ALIAS" --ks-pass env:STORE_PASS --key-pass env:KEY_PASS --out mobile/android/app/build/outputs/apk/release/A2-MESS-HUB-STABLE.apk /tmp/a2-aligned.apk
+          "$TOOLS/apksigner" verify --verbose --print-certs mobile/android/app/build/outputs/apk/release/A2-MESS-HUB-STABLE.apk
+          rm -f /tmp/a2messhub.jks /tmp/a2-aligned.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: A2-MESS-HUB-STABLE-SIGNED-APK
+          path: mobile/android/app/build/outputs/apk/release/A2-MESS-HUB-STABLE.apk
+          if-no-files-found: error
