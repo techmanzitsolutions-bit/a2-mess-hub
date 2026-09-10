@@ -2,8 +2,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn(){ return request.auth != null; }
-    function me(){ return get(/databases/$(database)/documents/users/$(request.auth.uid)); }
-    function role(){ return signedIn() && me().exists() ? me().data.role : null; }
+    function userPath(){ return /databases/$(database)/documents/users/$(request.auth.uid); }
+    function hasProfile(){ return signedIn() && exists(userPath()); }
+    function role(){ return hasProfile() ? get(userPath()).data.role : null; }
     function admin(){ return signedIn() && role() == 'admin'; }
     function chef(){ return signedIn() && role() == 'chef'; }
     function initialized(){ return exists(/databases/$(database)/documents/system/config); }
