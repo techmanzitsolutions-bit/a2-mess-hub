@@ -17,19 +17,20 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - name: Verify web app source
+      - name: Verify Firebase V4 source
         run: |
           test -f www/index.html
           test -f www/app.html
+          test -f firebase/google-services.json
           grep -q "app.html" www/index.html
-          grep -q "A2MessHubDB" www/app.html
-          grep -q "Create Account" www/app.html
-          grep -q "function members" www/app.html
-          grep -q "function inventory" www/app.html
-          grep -q "function meals" www/app.html
-          grep -q "function expenses" www/app.html
-          grep -q "function payments" www/app.html
-          ! grep -q "url=./index.html" www/app.html
+          grep -q "firebaseConfig" www/app.html
+          grep -q "a2-mess-hub" www/app.html
+          grep -q "No public signup" www/app.html
+          grep -q "createManagedUser" www/app.html
+          grep -q "Bill photo" www/app.html
+          grep -q "WhatsApp" www/app.html
+          ! grep -q "A2MessHubDB" www/app.html
+          ! grep -q "Create Account" www/app.html
       - name: Create Android project
         run: |
           mkdir mobile
@@ -39,15 +40,16 @@ jobs:
           npx cap init "A2 Mess Hub" "com.a2messhub.app" --web-dir=www
           mkdir -p www
           cp -r ../www/. ./www/
-          test -f www/index.html
-          test -f www/app.html
           npx cap add android
+          cp ../firebase/google-services.json android/app/google-services.json
           npx cap sync android
       - name: Verify packaged web assets
         run: |
           test -f mobile/android/app/src/main/assets/public/index.html
           test -f mobile/android/app/src/main/assets/public/app.html
-          grep -q "A2MessHubDB" mobile/android/app/src/main/assets/public/app.html
+          test -f mobile/android/app/google-services.json
+          grep -q "firebaseConfig" mobile/android/app/src/main/assets/public/app.html
+          grep -q "No public signup" mobile/android/app/src/main/assets/public/app.html
       - name: Build APK
         run: |
           cd mobile/android
@@ -55,5 +57,5 @@ jobs:
           ./gradlew assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: A2-Mess-Hub-V3-AUDITED-APK
+          name: A2-Mess-Hub-V4-FIREBASE-APK
           path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
