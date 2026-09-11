@@ -53,6 +53,9 @@ service cloud.firestore {
       allow read: if signedIn() && (admin() || resource.data.uid == request.auth.uid);
       allow create, update, delete: if admin();
     }
+    match /monthlyClosings/{month} {
+      allow read, create, update, delete: if admin();
+    }
     match /settings/{id} {
       allow read: if signedIn();
       allow write: if admin();
