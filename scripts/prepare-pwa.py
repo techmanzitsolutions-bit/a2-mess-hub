@@ -58,39 +58,51 @@ s = s.replace(
 "import{getFirestore,doc,getDoc,setDoc,collection,onSnapshot,addDoc,updateDoc,deleteDoc,serverTimestamp,writeBatch,query,where}from'https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js';")
 old_listen = "function listen(){state.unsubs.forEach(f=>f());state.unsubs=[];state.unsubs.push(onSnapshot(doc(db,'system','config'),s=>{state.config=s.data()||{};render()}));['members','inventory','meals','expenses','payments'].forEach(c=>state.unsubs.push(onSnapshot(collection(db,c),s=>{state.data[c]=s.docs.map(d=>({id:d.id,...d.data()}));render()})));if(state.profile.role==='admin')state.unsubs.push(onSnapshot(collection(db,'users'),s=>{state.data.users=s.docs.map(d=>({id:d.id,...d.data()}));render()}))}"
 new_listen = "function listen(){state.unsubs.forEach(f=>f());state.unsubs=[];state.unsubs.push(onSnapshot(doc(db,'system','config'),x=>{state.config=x.data()||{};render()},err));['members','inventory','meals','expenses'].forEach(c=>state.unsubs.push(onSnapshot(collection(db,c),x=>{state.data[c]=x.docs.map(d=>({id:d.id,...d.data()}));render()},err)));if(state.profile.role==='admin'){state.unsubs.push(onSnapshot(collection(db,'payments'),x=>{state.data.payments=x.docs.map(d=>({id:d.id,...d.data()}));render()},err));state.unsubs.push(onSnapshot(collection(db,'users'),x=>{state.data.users=x.docs.map(d=>({id:d.id,...d.data()}));render()},err))}else if(state.profile.role==='member'){state.unsubs.push(onSnapshot(query(collection(db,'payments'),where('uid','==',auth.currentUser.uid)),x=>{state.data.payments=x.docs.map(d=>({id:d.id,...d.data()}));render()},err))}else{state.data.payments=[]}}"
-if old_listen not in s:
-    raise SystemExit('listen function not found for final launch patch')
-s = s.replace(old_listen, new_listen)
+if old_listen in s:
+    s = s.replace(old_listen, new_listen)
 
 helper_marker = "function expenseDate(x){"
 preview_helper = "function billPreviewUrl(x,size=300){const u=resolvedBillUrl(x);if(!u)return '';if(u.includes('res.cloudinary.com/'))return u.replace('/upload/','/upload/f_auto,q_auto,c_limit,w_'+size+',h_'+size+'/');return u+'-/preview/'+size+'x'+size+'/'}\n"
-if preview_helper.strip() not in s:
-    if helper_marker not in s:
-        raise SystemExit('expenseDate marker not found')
+if preview_helper.strip() not in s and helper_marker in s:
     s = s.replace(helper_marker, preview_helper + helper_marker)
 s = s.replace('src="${esc(u)}-/preview/300x300/"', 'src="${esc(billPreviewUrl(x,300))}"')
 s = s.replace("resolvedBillUrl(x)?resolvedBillUrl(x)+'-/preview/800x800/':''", "billPreviewUrl(x,800)")
 
-# Premium animated A2 logo: chef cap flies in, cutlery rises, two leaves grow and gold orbit glows.
-logo_css = r'''<style id="a2-premium-logo-style">
-.a2-logo-stage{position:relative;width:min(330px,82vw);margin:0 auto 6px;filter:drop-shadow(0 18px 34px #0009);isolation:isolate}.a2-logo-stage.compact{width:118px;margin:0 0 10px}.a2-logo-svg{display:block;width:100%;height:auto;overflow:visible}.a2-orbit{fill:none;stroke:url(#a2gold);stroke-width:2.5;stroke-linecap:round;stroke-dasharray:18 10;opacity:0;transform-origin:180px 140px;animation:a2OrbitIn 1.3s .9s ease-out forwards,a2OrbitSpin 12s 2.2s linear infinite}.a2-cap{opacity:0;transform-origin:110px 70px;animation:a2CapFly 1s .12s cubic-bezier(.16,.9,.3,1.2) forwards}.a2-letterA{opacity:0;transform-origin:128px 150px;animation:a2Rise .85s .42s cubic-bezier(.2,.9,.25,1.12) forwards}.a2-letter2{opacity:0;transform-origin:235px 145px;animation:a2Right .9s .55s cubic-bezier(.2,.9,.25,1.12) forwards}.a2-fork{opacity:0;animation:a2Cutlery .7s .95s ease-out forwards}.a2-spoon{opacity:0;animation:a2Cutlery .7s 1.08s ease-out forwards}.a2-leaf-left,.a2-leaf-right{opacity:0;transform-box:fill-box;transform-origin:bottom center;animation:a2LeafGrow .85s 1.22s cubic-bezier(.2,.8,.2,1.25) forwards}.a2-leaf-right{animation-delay:1.38s}.a2-brand-word{opacity:0;animation:a2WordIn .7s 1.65s ease-out forwards}.a2-brand-tag{opacity:0;animation:a2WordIn .7s 1.95s ease-out forwards}.a2-spark{fill:#ffe6a3;opacity:0;animation:a2Spark 2.2s 1.45s ease-in-out infinite}.a2-spark.s2{animation-delay:1.75s}.a2-spark.s3{animation-delay:2.05s}@keyframes a2CapFly{0%{opacity:0;transform:translate(-120px,-95px) rotate(-24deg) scale(.45)}65%{opacity:1;transform:translate(7px,5px) rotate(5deg) scale(1.07)}100%{opacity:1;transform:none}}@keyframes a2Rise{0%{opacity:0;transform:translateY(70px) scale(.72)}100%{opacity:1;transform:none}}@keyframes a2Right{0%{opacity:0;transform:translateX(105px) rotate(18deg) scale(.72)}100%{opacity:1;transform:none}}@keyframes a2Cutlery{0%{opacity:0;transform:translateY(65px) scale(.7)}100%{opacity:1;transform:none}}@keyframes a2LeafGrow{0%{opacity:0;transform:scale(.05) rotate(-10deg)}60%{opacity:1;transform:scale(1.12) rotate(3deg)}100%{opacity:1;transform:scale(1) rotate(0)}}@keyframes a2OrbitIn{to{opacity:.8}}@keyframes a2OrbitSpin{to{transform:rotate(360deg)}}@keyframes a2WordIn{0%{opacity:0;transform:translateY(13px);filter:blur(8px)}100%{opacity:1;transform:none;filter:none}}@keyframes a2Spark{0%,100%{opacity:0;transform:scale(.3)}45%{opacity:1;transform:scale(1.5)}70%{opacity:.15;transform:scale(.7)}}@media(prefers-reduced-motion:reduce){.a2-logo-stage *{animation-duration:.01ms!important;animation-delay:0ms!important;animation-iteration-count:1!important;opacity:1!important;transform:none!important}}
-</style>'''
-logo_markup = r'''<div class="a2-logo-stage"><svg class="a2-logo-svg" viewBox="0 0 360 300" role="img" aria-label="A2 MESS HUB logo"><defs><linearGradient id="a2gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff2b4"/><stop offset=".34" stop-color="#f7c95e"/><stop offset=".72" stop-color="#d89925"/><stop offset="1" stop-color="#fff0a6"/></linearGradient><linearGradient id="a2green" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a9ff7a"/><stop offset=".5" stop-color="#36d86f"/><stop offset="1" stop-color="#0a8e49"/></linearGradient><filter id="a2glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><ellipse class="a2-orbit" cx="180" cy="142" rx="142" ry="76"/><g class="a2-cap" fill="url(#a2gold)" stroke="#fff1b0" stroke-width="2"><path d="M78 70c-22-4-25-36 0-43 7-22 39-25 50-6 19-13 46 4 42 24 21 8 15 38-7 39H90c-5-1-9-6-12-14z"/><path d="M88 76h73l-7 22H95z"/></g><text class="a2-letterA" x="69" y="214" font-family="Arial Black,Arial,sans-serif" font-size="154" font-weight="900" fill="url(#a2gold)" stroke="#f4d475" stroke-width="1">A</text><text class="a2-letter2" x="184" y="214" font-family="Arial Black,Arial,sans-serif" font-size="154" font-weight="900" fill="url(#a2gold)" stroke="#f4d475" stroke-width="1">2</text><g class="a2-fork" stroke="#071711" stroke-width="7" stroke-linecap="round" fill="none"><path d="M117 115v70"/><path d="M104 115v31c0 12 26 12 26 0v-31"/><path d="M111 115v26M123 115v26"/></g><g class="a2-spoon" fill="#071711"><ellipse cx="147" cy="132" rx="13" ry="20"/><rect x="143" y="147" width="8" height="42" rx="4"/></g><path class="a2-leaf-left" d="M178 213C141 173 99 176 82 207c31 11 65 15 96 6z" fill="url(#a2green)" stroke="#b7ff89" stroke-width="2"/><path class="a2-leaf-right" d="M179 213c37-40 78-37 98-8-31 15-65 18-98 8z" fill="url(#a2green)" stroke="#b7ff89" stroke-width="2"/><path d="M177 214c-24-14-47-23-69-25M181 214c23-15 46-23 69-26" fill="none" stroke="#0f7d42" stroke-width="3"/><circle class="a2-spark" cx="55" cy="126" r="4" filter="url(#a2glow)"/><circle class="a2-spark s2" cx="304" cy="101" r="3.5" filter="url(#a2glow)"/><circle class="a2-spark s3" cx="278" cy="221" r="3" filter="url(#a2glow)"/><text class="a2-brand-word" x="180" y="258" text-anchor="middle" font-family="Arial,sans-serif" font-size="31" font-weight="900" letter-spacing="5" fill="#f8cf67">MESS <tspan fill="#57e887">HUB</tspan></text><text class="a2-brand-tag" x="180" y="282" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="700" letter-spacing="3" fill="#dff8ec">GOOD FOOD • BETTER TOGETHER</text></svg></div>'''
-
-if 'id="a2-premium-logo-style"' not in s:
-    s = s.replace('</head>', logo_css + '\n</head>')
-# Initial cloud-loading splash.
-s = s.replace('<div class="steam">♨️ 🍲 ♨️</div><div class="logo">A2</div><h1 class="title">MESS HUB</h1><p class="sub">Eat • Track • Manage • Sync</p>', logo_markup + '<p class="sub">Eat • Track • Manage • Sync</p>')
-# Login / owner setup screen.
-s = s.replace('<div class=steam>♨️ 🍲 ♨️</div><div class=logo>A2</div><h1 class=title>MESS HUB</h1><p class=sub>Cloud synchronized mess management</p>', logo_markup + '<p class=sub>Cloud synchronized mess management</p>')
-# Sidebar gets a compact static-style mark while preserving fast navigation.
-s = s.replace('<div class=brand>A2 MESS HUB</div>', '<div class=brand style="display:flex;align-items:center;gap:9px"><span style="display:grid;place-items:center;width:34px;height:34px;border:1px solid #f6cb6755;border-radius:10px;background:#06140f;color:#f6cb67;font-weight:1000;box-shadow:0 0 18px #f6cb6720">A2</span><span>A2 MESS HUB</span></div>')
-
+# Unified animated A2 branding for splash/front/login.
+brand_css = '''\n<style id="a2-brand-style">\n.a2-logo-stage{position:relative;width:190px;height:190px;margin:0 auto 8px;display:grid;place-items:center;filter:drop-shadow(0 10px 30px #0008)}\n.a2-logo-stage img{width:100%;height:100%;object-fit:contain;animation:a2logoIn 1.1s cubic-bezier(.2,.9,.2,1) both,a2float 4s ease-in-out 1.1s infinite}\n.a2-logo-stage:after{content:'';position:absolute;inset:20px;border-radius:50%;border:1px solid #f6cb6733;box-shadow:0 0 34px #f6cb6720;animation:a2orbit 4.5s linear infinite}\n.a2-brand-name{text-align:center;font-weight:1000;letter-spacing:.18em;font-size:22px;margin-top:-6px}.a2-brand-name span{color:#65e66d}.a2-brand-tag{text-align:center;color:#d8c28b;font-size:11px;letter-spacing:.13em;margin-top:5px}.a2-powered{text-align:center;color:#f6cb67;font-weight:900;margin-top:12px}\n@keyframes a2logoIn{0%{opacity:0;transform:translateY(-45px) scale(.7) rotate(-7deg)}60%{opacity:1;transform:translateY(8px) scale(1.05) rotate(2deg)}100%{opacity:1;transform:none}}\n@keyframes a2float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}@keyframes a2orbit{to{transform:rotate(360deg)}}\n@media(prefers-reduced-motion:reduce){.a2-logo-stage img,.a2-logo-stage:after{animation:none!important}}\n</style>\n'''
+if 'id="a2-brand-style"' not in s:
+    s=s.replace('</head>',brand_css+'</head>')
+brand_block='<div class="a2-logo-stage"><img src="./logo.svg" alt="A2 MESS HUB logo"></div><div class="a2-brand-name">A2 MESS <span>HUB</span></div><div class="a2-brand-tag">GOOD FOOD • BETTER TOGETHER</div>'
+s=s.replace('<div class="steam">♨️ 🍲 ♨️</div><div class="logo">A2</div><h1 class="title">MESS HUB</h1>',brand_block)
+s=s.replace('<div class=steam>♨️ 🍲 ♨️</div><div class=logo>A2</div><h1 class=title>MESS HUB</h1>',brand_block)
+s=s.replace('<p class=powered>⚡ POWERED BY TECHMANZ</p>','<p class="a2-powered">⚡ POWERED BY TECHMANZ</p>')
 app.write_text(s)
 
-# Static logo asset used by browser/PWA icon surfaces.
-logo_svg = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff2b4"/><stop offset=".45" stop-color="#f7c95e"/><stop offset="1" stop-color="#d89925"/></linearGradient><linearGradient id="l" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#9dff73"/><stop offset="1" stop-color="#0c9a50"/></linearGradient></defs><rect width="512" height="512" rx="116" fill="#06140f"/><circle cx="256" cy="256" r="214" fill="#0b241b" stroke="#f7c95e" stroke-width="8"/><path d="M135 135c-34-8-36-54 1-65 12-34 60-38 78-8 29-18 67 6 61 37 31 12 22 57-11 59H153c-8-2-14-10-18-23z" fill="url(#g)"/><text x="95" y="352" font-family="Arial Black,Arial,sans-serif" font-size="270" font-weight="900" fill="url(#g)">A2</text><path d="M255 352c-55-61-113-54-139-10 45 23 92 29 139 10zM257 352c54-59 111-54 139-12-45 24-92 30-139 12z" fill="url(#l)"/><text x="256" y="428" text-anchor="middle" font-family="Arial,sans-serif" font-size="36" font-weight="900" letter-spacing="6" fill="#f7d477">MESS HUB</text></svg>'''
-(WWW/'a2-logo.svg').write_text(logo_svg)
+logo_svg = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<defs>
+ <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff1ad"/><stop offset=".38" stop-color="#f6c34f"/><stop offset="1" stop-color="#a8610d"/></linearGradient>
+ <linearGradient id="l" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b9ff6d"/><stop offset=".5" stop-color="#39c95c"/><stop offset="1" stop-color="#0f6d34"/></linearGradient>
+ <filter id="glow"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect width="512" height="512" rx="112" fill="#07130f"/>
+<circle cx="256" cy="256" r="202" fill="none" stroke="#f6c34f" stroke-width="6" opacity=".55"/>
+<!-- chef cap -->
+<path d="M139 140c-31-3-47-25-41-51 6-26 33-39 56-28 9-28 42-39 64-21 20-22 60-14 69 15 29-9 55 12 53 40-2 25-21 41-47 43l-9 33H149z" fill="#fff7dc" stroke="#e7b83f" stroke-width="8"/>
+<path d="M151 148h137l-9 30H157z" fill="url(#g)"/>
+<!-- A2 -->
+<path d="M116 357l74-190h65l74 190h-57l-14-41h-75l-14 41zm82-88h45l-22-68z" fill="url(#g)" filter="url(#glow)"/>
+<path d="M295 209c8-39 39-61 82-61 49 0 82 28 82 69 0 35-18 57-57 84l-35 24h98v32H294v-27c0-20 7-34 26-47l47-33c24-17 33-27 33-42 0-17-12-28-30-28-19 0-31 11-34 34z" fill="url(#g)"/>
+<!-- fork -->
+<path d="M190 218v83m-12-83v38m12-38v38m12-38v38m-24 0h24" stroke="#07130f" stroke-width="8" stroke-linecap="round" fill="none"/>
+<!-- spoon -->
+<ellipse cx="232" cy="239" rx="13" ry="24" fill="#07130f"/><path d="M232 261v41" stroke="#07130f" stroke-width="8" stroke-linecap="round"/>
+<!-- leaves -->
+<path d="M248 345c-68 14-107-10-126-57 62-5 104 10 126 57z" fill="url(#l)" stroke="#7ff58a" stroke-width="4"/><path d="M259 346c49-57 96-71 145-55-20 51-66 73-145 55z" fill="url(#l)" stroke="#7ff58a" stroke-width="4"/><path d="M177 307c31 10 51 21 72 39M338 309c-28 10-51 22-77 38" stroke="#d6ff91" stroke-width="4" fill="none" opacity=".8"/>
+<!-- label -->
+<text x="256" y="413" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="42" font-weight="900" letter-spacing="5" fill="#f6c34f">A2</text>
+<text x="256" y="454" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="25" font-weight="800" letter-spacing="4" fill="#ffffff">MESS <tspan fill="#63df68">HUB</tspan></text>
+</svg>'''
+(WWW/'logo.svg').write_text(logo_svg)
 
 manifest = '''{
   "id":"./",
@@ -101,21 +113,21 @@ manifest = '''{
   "scope":"./",
   "display":"standalone",
   "orientation":"portrait-primary",
-  "background_color":"#020907",
-  "theme_color":"#06140f",
-  "icons":[{"src":"./a2-logo.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+  "background_color":"#07130f",
+  "theme_color":"#07130f",
+  "icons":[{"src":"./logo.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
 }\n'''
 (WWW/'manifest.webmanifest').write_text(manifest)
 (WWW/'pwa.js').write_text("""(()=>{let r=false;if('serviceWorker'in navigator){window.addEventListener('load',async()=>{try{const x=await navigator.serviceWorker.register('./sw.js',{scope:'./'});x.update().catch(()=>{})}catch(e){console.warn(e)}});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(r)return;r=true;location.reload()})}})();\n""")
-(WWW/'sw.js').write_text(f"""const BUILD='{SHA}';const CACHE=`a2-mess-hub-${{BUILD}}`;const CORE=['./','./index.html','./app.html','./mobile-fixes.css','./manifest.webmanifest','./pwa.js','./a2-logo.svg'];self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())));self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('a2-mess-hub-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));self.addEventListener('fetch',e=>{{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(u.origin!==location.origin)return;e.respondWith(fetch(e.request).then(r=>{{if(r&&r.ok){{const x=r.clone();caches.open(CACHE).then(c=>c.put(e.request,x))}}return r}}).catch(()=>caches.match(e.request).then(x=>x||caches.match('./index.html'))))}});\n""")
+(WWW/'sw.js').write_text(f"""const BUILD='{SHA}';const CACHE=`a2-mess-hub-${{BUILD}}`;const CORE=['./','./index.html','./app.html','./mobile-fixes.css','./manifest.webmanifest','./pwa.js','./logo.svg'];self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())));self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('a2-mess-hub-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));self.addEventListener('fetch',e=>{{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(u.origin!==location.origin)return;e.respondWith(fetch(e.request).then(r=>{{if(r&&r.ok){{const x=r.clone();caches.open(CACHE).then(c=>c.put(e.request,x))}}return r}}).catch(()=>caches.match(e.request).then(x=>x||caches.match('./index.html'))))}});\n""")
 
-head = '<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./a2-logo.svg" type="image/svg+xml"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="A2 MESS HUB">'
+head = '<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="./logo.svg"><link rel="apple-touch-icon" href="./logo.svg"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="A2 MESS HUB">'
 script = '<script src="./pwa.js" defer></script>'
 for name in ('index.html','app.html'):
     p = WWW / name
     t = p.read_text()
     if 'manifest.webmanifest' not in t: t = t.replace('</head>', head+'\n</head>')
-    elif 'a2-logo.svg' not in t: t = t.replace('</head>', '<link rel="icon" href="./a2-logo.svg" type="image/svg+xml">\n</head>')
+    elif 'rel="icon"' not in t: t = t.replace('</head>','<link rel="icon" type="image/svg+xml" href="./logo.svg"><link rel="apple-touch-icon" href="./logo.svg">\n</head>')
     if 'src="./pwa.js"' not in t: t = t.replace('</body>', script+'\n</body>')
     p.write_text(t)
 
@@ -129,9 +141,7 @@ required = [
     "where('uid','==',auth.currentUser.uid)",
     'function billPreviewUrl(x,size=300)',
     "imageProvider:'cloudinary'",
-    'a2-premium-logo-style',
-    'a2-cap',
-    'a2-leaf-left',
+    './logo.svg',
     'GOOD FOOD • BETTER TOGETHER'
 ]
 for token in required:
@@ -139,4 +149,6 @@ for token in required:
         raise SystemExit(f'Missing required feature: {token}')
 if 'src="${esc(u)}-/preview/300x300/"' in final:
     raise SystemExit('Old Uploadcare-only expense thumbnail syntax still present')
-print('A2 MESS HUB PWA prepared successfully: animated logo + Cloudinary + privacy + synced branding')
+if not (WWW/'logo.svg').exists():
+    raise SystemExit('Unified logo asset missing')
+print('A2 MESS HUB PWA prepared successfully: unified animated splash + favicon + home-screen icon + Cloudinary')
