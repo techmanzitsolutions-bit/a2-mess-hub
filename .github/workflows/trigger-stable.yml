@@ -44,6 +44,9 @@ jobs:
       - name: Add admin monthly backup and restore
         run: python scripts/monthly-backup-patch.py
 
+      - name: Add monthly closing and carry forward
+        run: python scripts/monthly-closing-patch.py
+
       - name: Validate app JavaScript and production features
         run: |
           python - <<'PY'
@@ -76,6 +79,8 @@ jobs:
             "metric('Balance Pending'",
             'function linkedMemberForUser(u)',
             'Link with Member',
+            'Reset Password',
+            'window.resetUser=async email=>',
             'User created and member linked',
             'member record kept',
             'api.cloudinary.com/v1_1/rtsrjhpm/image/upload',
@@ -89,12 +94,21 @@ jobs:
             "backup:'Backup'",
             'A2-MESS-HUB-MONTHLY-BACKUP',
             'Expense bill-image links are included',
-            'backup:backupPage'
+            'backup:backupPage',
+            'function monthClosePage(){',
+            'function closingPreview(month){',
+            'window.closeSelectedMonth=async',
+            'monthlyClosings',
+            'carryToMonth',
+            "closing:'Month Close'",
+            'closing:monthClosePage',
+            'A2-MESS-HUB-CLOSING-',
+            'AED 200 = 1.00 share · 100 = 0.50 · 250 = 1.25'
           ]
           missing=[x for x in required if x not in s]
           if missing:
               raise SystemExit('Missing production features: '+', '.join(missing))
-          print('Payments, totals, user/member linking, Cloudinary, ADNOC LPG launcher and monthly backup present')
+          print('Payments, totals, user/member linking, Cloudinary, ADNOC LPG, backup and monthly closing present')
           PY
           node --check /tmp/a2-app-check.mjs
 
