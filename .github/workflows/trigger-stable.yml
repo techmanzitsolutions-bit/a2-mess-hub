@@ -35,6 +35,9 @@ jobs:
       - name: Add global receivable totals
         run: python scripts/global-receivables-patch.py
 
+      - name: Add user to member linking
+        run: python scripts/user-member-link-patch.py
+
       - name: Add ADNOC LPG order launcher
         run: python scripts/gas-order-patch.py
 
@@ -68,6 +71,10 @@ jobs:
             'Balance Pending (All Members)',
             "metric('Total Received'",
             "metric('Balance Pending'",
+            'function linkedMemberForUser(u)',
+            'Link with Member',
+            'User created and member linked',
+            'member record kept',
             'api.cloudinary.com/v1_1/rtsrjhpm/image/upload',
             'function gasOrder(){',
             'window.openAdnocGas=',
@@ -77,7 +84,7 @@ jobs:
           missing=[x for x in required if x not in s]
           if missing:
               raise SystemExit('Missing production features: '+', '.join(missing))
-          print('Payments, global totals, Cloudinary and ADNOC LPG launcher present')
+          print('Payments, totals, user/member linking, Cloudinary and ADNOC LPG launcher present')
           PY
           node --check /tmp/a2-app-check.mjs
 
