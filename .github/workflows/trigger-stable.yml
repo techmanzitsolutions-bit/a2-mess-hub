@@ -1,4 +1,4 @@
-name: Trigger Stable APK
+name: Trigger PWA Deploy
 
 on:
   push:
@@ -12,7 +12,7 @@ jobs:
   trigger:
     runs-on: ubuntu-latest
     steps:
-      - name: Start stable release workflow
+      - name: Start PWA deployment workflow
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run stable-release.yml --repo ${{ github.repository }} --ref main
+        run: gh workflow run pages.yml --repo ${{ github.repository }} --ref main
