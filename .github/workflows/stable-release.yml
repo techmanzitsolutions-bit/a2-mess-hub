@@ -55,6 +55,8 @@ jobs:
               start=s.index(marker)
               end=s.index("\nwindow.pickExpensePhoto", start)
               replacement='''async function uploadBill(file){
+  if(!file)throw new Error('Choose a bill photo first');
+  if(file.type&&!file.type.startsWith('image/'))throw new Error('Bill file must be an image');
   const blob=await compressImage(file),fd=new FormData();
   fd.append('file',blob,'bill.jpg');
   fd.append('upload_preset','a2_mess_bills');
@@ -72,6 +74,35 @@ jobs:
               p.write_text(s)
           PY
 
+      - name: Apply monthly payment consistency fix
+        run: |
+          python scripts/payment-calculation-fix.py www/app.html android/app/src/main/assets/public/app.html
+
+      - name: Validate app JavaScript and required features
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          required=[
+            'Expense Name','Added By','Read only','Total Receivable',
+            'api.cloudinary.com/v1_1/rtsrjhpm/image/upload',
+            "upload_preset','a2_mess_bills",'function currentBillingMonth()',
+            'billingMonth','Member Balances','Payment Transactions',
+            'paymentFormForMember','PARTIAL'
+          ]
+          for path in [Path('www/app.html'),Path('android/app/src/main/assets/public/app.html')]:
+              s=path.read_text()
+              missing=[x for x in required if x not in s]
+              if missing: raise SystemExit(f'{path}: missing '+', '.join(missing))
+              marker='<script type="module">'
+              a=s.find(marker); b=s.find('</script>',a+len(marker))
+              if a<0 or b<0: raise SystemExit(f'{path}: module script markers missing')
+              out=Path('/tmp')/(path.parent.name+'-app-check.mjs')
+              out.write_text(s[a+len(marker):b])
+              print(out)
+          PY
+          node --check /tmp/www-app-check.mjs
+          node --check /tmp/public-app-check.mjs
+
       - name: Set update version
         run: |
           RUN=${GITHUB_RUN_NUMBER}
@@ -81,15 +112,6 @@ jobs:
           sed -i -E "s/versionName \"[^\"]+\"/versionName \"${VERSION_NAME}\"/" android/app/build.gradle
           echo "VERSION_CODE=${VERSION_CODE}" >> "$GITHUB_ENV"
           echo "VERSION_NAME=${VERSION_NAME}" >> "$GITHUB_ENV"
-
-      - name: Verify required features
-        run: |
-          grep -R -q 'Expense Name' www android/app/src/main/assets/public
-          grep -R -q 'Added By' www android/app/src/main/assets/public
-          grep -R -q 'Read only' www android/app/src/main/assets/public
-          grep -R -q 'Total Receivable' www android/app/src/main/assets/public
-          grep -R -q 'api.cloudinary.com/v1_1/rtsrjhpm/image/upload' www android/app/src/main/assets/public
-          grep -R -q "upload_preset','a2_mess_bills" www android/app/src/main/assets/public
 
       - name: Build release APK
         run: |
