@@ -59,6 +59,9 @@ jobs:
       - name: Ensure realtime meal skip sync
         run: python scripts/meal-skip-realtime-fix.py
 
+      - name: Verify meal skip cloud writes
+        run: python scripts/meal-skip-cloud-write-fix.py
+
       - name: Validate app JavaScript and production features
         run: |
           python - <<'PY'
@@ -134,12 +137,15 @@ jobs:
             'WhatsApp Admin',
             'Email Chef',
             "onSnapshot(collection(db,'mealSkips')",
-            '● LIVE SYNC'
+            '● LIVE SYNC',
+            'Cloud verification failed',
+            'skip saved to cloud ✅',
+            'NO NEED · CLOUD SAVED'
           ]
           missing=[x for x in required if x not in s]
           if missing:
               raise SystemExit('Missing production features: '+', '.join(missing))
-          print('Payments, totals, linking, Cloudinary, LPG, backup, closing, meal skip, notifications and realtime sync present')
+          print('Payments, totals, linking, Cloudinary, LPG, backup, closing, meal skip, notifications, realtime sync and verified cloud writes present')
           PY
           node --check /tmp/a2-app-check.mjs
 
