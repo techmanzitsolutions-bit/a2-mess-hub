@@ -50,6 +50,9 @@ jobs:
       - name: Add member meal skip and kitchen counts
         run: python scripts/meal-skip-patch.py
 
+      - name: Force member Skip Meal visibility
+        run: python scripts/member-skip-visibility-fix.py
+
       - name: Validate app JavaScript and production features
         run: |
           python - <<'PY'
@@ -116,7 +119,9 @@ jobs:
             'Kitchen Meal Count',
             'NO NEED / SKIP',
             'Kitchen preparation started – skip closed.',
-            'Skip Meal changes cooking quantity only'
+            'Skip Meal changes cooking quantity only',
+            'MEAL SKIP QUICK ACTION',
+            'Skip Meal / No Need'
           ]
           missing=[x for x in required if x not in s]
           if missing:
