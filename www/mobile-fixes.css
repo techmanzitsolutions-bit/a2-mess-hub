@@ -14,14 +14,13 @@ button{touch-action:manipulation}
 .bottom{padding-bottom:max(6px,env(safe-area-inset-bottom))}
 .billpreview img{width:100%;height:auto;max-height:52dvh;object-fit:contain}
 
-/* Compact TECH MANZ powered-by mark: only TM + TECH MANZ + lightning */
+/* TECH MANZ powered-by mark: full image, no zoom/crop */
 .powered{
   position:relative;
   display:block;
-  width:min(100%,210px);
-  aspect-ratio:2.25/1;
-  height:auto!important;
-  min-height:0;
+  width:min(100%,190px);
+  height:145px!important;
+  min-height:145px;
   margin:18px auto 8px!important;
   padding:0!important;
   overflow:hidden;
@@ -29,8 +28,8 @@ button{touch-action:manipulation}
   border:1px solid rgba(68,190,255,.5);
   background-color:#04111d;
   background-image:url('./techmanz-logo.jpg');
-  background-position:center 10%;
-  background-size:206% auto;
+  background-position:center;
+  background-size:contain;
   background-repeat:no-repeat;
   font-size:0!important;
   line-height:0!important;
@@ -38,27 +37,13 @@ button{touch-action:manipulation}
   box-shadow:0 0 12px rgba(0,156,255,.32),0 0 22px rgba(255,126,45,.14),inset 0 0 15px rgba(74,184,255,.10);
   isolation:isolate;
 }
-.powered::before{
-  content:'POWERED BY';
-  position:absolute;
-  left:8px;
-  top:7px;
-  z-index:3;
-  padding:3px 6px;
-  border-radius:999px;
-  background:rgba(1,10,20,.72);
-  border:1px solid rgba(87,202,255,.4);
-  color:#dff7ff;
-  font:800 8px/1 Inter,system-ui,sans-serif;
-  letter-spacing:1.2px;
-  text-shadow:0 0 7px #35bfff;
-}
+.powered::before{content:none!important}
 .powered::after{
   content:'';
   position:absolute;
-  inset:-40%;
+  inset:-38%;
   z-index:2;
-  background:linear-gradient(115deg,transparent 43%,rgba(83,207,255,0) 47%,rgba(83,207,255,.65) 49%,#fff 50%,rgba(255,142,55,.65) 51%,rgba(255,142,55,0) 54%,transparent 58%);
+  background:linear-gradient(115deg,transparent 43%,rgba(83,207,255,0) 47%,rgba(83,207,255,.45) 49%,#fff 50%,rgba(255,142,55,.5) 51%,rgba(255,142,55,0) 54%,transparent 58%);
   transform:translateX(-70%) rotate(-8deg);
   mix-blend-mode:screen;
   animation:techmanzLightning 3.2s ease-in-out infinite;
@@ -66,11 +51,11 @@ button{touch-action:manipulation}
 }
 @keyframes techmanzLightning{
   0%,58%{transform:translateX(-70%) rotate(-8deg);opacity:0}
-  62%{opacity:.85}
-  72%{transform:translateX(70%) rotate(-8deg);opacity:.15}
+  62%{opacity:.65}
+  72%{transform:translateX(70%) rotate(-8deg);opacity:.12}
   100%{transform:translateX(70%) rotate(-8deg);opacity:0}
 }
-@media(prefers-reduced-motion:reduce){.powered::after{animation:none;opacity:.12;transform:none}}
+@media(prefers-reduced-motion:reduce){.powered::after{animation:none;opacity:.1;transform:none}}
 
 @media(max-width:900px){
   .main{padding:14px 11px calc(92px + env(safe-area-inset-bottom))}
@@ -82,7 +67,7 @@ button{touch-action:manipulation}
   .bottom{left:max(7px,env(safe-area-inset-left));right:max(7px,env(safe-area-inset-right));max-width:calc(100vw - 14px);scrollbar-width:none;-webkit-overflow-scrolling:touch}
   .bottom::-webkit-scrollbar{display:none}
   .bottom button{flex:0 0 auto}
-  .powered{width:min(100%,200px);border-radius:13px}
+  .powered{width:min(100%,180px);height:138px!important;min-height:138px;border-radius:13px}
 }
 
 @media(max-width:700px){
@@ -115,7 +100,7 @@ button{touch-action:manipulation}
   .modal>.card{width:calc(100vw - 14px);max-width:calc(100vw - 14px);max-height:calc(100dvh - 14px);border-radius:16px;padding:13px}
   .bottom button{min-width:68px;padding:8px 4px;font-size:9px}
   .pickers{grid-template-columns:1fr}
-  .powered{width:min(100%,190px);border-radius:12px}
+  .powered{width:min(100%,170px);height:130px!important;min-height:130px;border-radius:12px}
 }
 
 @media(max-width:380px){
@@ -124,7 +109,7 @@ button{touch-action:manipulation}
   .actions{grid-template-columns:1fr!important}
   .bottom button{min-width:62px;font-size:9px}
   .small,.muted{font-size:11px}
-  .powered{width:min(100%,178px);border-radius:11px}
+  .powered{width:min(100%,160px);height:122px!important;min-height:122px;border-radius:11px}
 }
 
 @media(orientation:landscape) and (max-height:520px){
