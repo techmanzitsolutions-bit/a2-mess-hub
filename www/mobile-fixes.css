@@ -14,63 +14,63 @@ button{touch-action:manipulation}
 .bottom{padding-bottom:max(6px,env(safe-area-inset-bottom))}
 .billpreview img{width:100%;height:auto;max-height:52dvh;object-fit:contain}
 
-/* TECH MANZ powered-by branding — show the FULL artwork on every device */
+/* Compact TECH MANZ powered-by mark: only TM + TECH MANZ + lightning */
 .powered{
   position:relative;
   display:block;
-  width:min(100%,360px);
-  aspect-ratio:3/2;
+  width:min(100%,210px);
+  aspect-ratio:2.25/1;
   height:auto!important;
   min-height:0;
-  margin:18px auto 10px!important;
+  margin:18px auto 8px!important;
   padding:0!important;
   overflow:hidden;
-  border-radius:18px;
-  border:1px solid rgba(68,190,255,.55);
+  border-radius:14px;
+  border:1px solid rgba(68,190,255,.5);
   background-color:#04111d;
   background-image:url('./techmanz-logo.jpg');
-  background-position:center;
-  background-size:contain;
+  background-position:center 10%;
+  background-size:206% auto;
   background-repeat:no-repeat;
   font-size:0!important;
   line-height:0!important;
   color:transparent!important;
-  box-shadow:0 0 16px rgba(0,156,255,.38),0 0 32px rgba(255,126,45,.18),inset 0 0 20px rgba(74,184,255,.12);
+  box-shadow:0 0 12px rgba(0,156,255,.32),0 0 22px rgba(255,126,45,.14),inset 0 0 15px rgba(74,184,255,.10);
   isolation:isolate;
 }
 .powered::before{
   content:'POWERED BY';
   position:absolute;
-  left:10px;
-  top:9px;
+  left:8px;
+  top:7px;
   z-index:3;
-  padding:4px 8px;
+  padding:3px 6px;
   border-radius:999px;
-  background:rgba(1,10,20,.76);
-  border:1px solid rgba(87,202,255,.45);
+  background:rgba(1,10,20,.72);
+  border:1px solid rgba(87,202,255,.4);
   color:#dff7ff;
-  font:800 9px/1.1 Inter,system-ui,sans-serif;
-  letter-spacing:1.6px;
-  text-shadow:0 0 8px #35bfff;
+  font:800 8px/1 Inter,system-ui,sans-serif;
+  letter-spacing:1.2px;
+  text-shadow:0 0 7px #35bfff;
 }
 .powered::after{
   content:'';
   position:absolute;
-  inset:-35%;
+  inset:-40%;
   z-index:2;
-  background:linear-gradient(115deg,transparent 42%,rgba(65,199,255,0) 46%,rgba(83,207,255,.72) 49%,#fff 50%,rgba(255,142,55,.75) 51%,rgba(255,142,55,0) 54%,transparent 58%);
-  transform:translateX(-68%) rotate(-7deg);
+  background:linear-gradient(115deg,transparent 43%,rgba(83,207,255,0) 47%,rgba(83,207,255,.65) 49%,#fff 50%,rgba(255,142,55,.65) 51%,rgba(255,142,55,0) 54%,transparent 58%);
+  transform:translateX(-70%) rotate(-8deg);
   mix-blend-mode:screen;
   animation:techmanzLightning 3.2s ease-in-out infinite;
   pointer-events:none;
 }
 @keyframes techmanzLightning{
-  0%,58%{transform:translateX(-68%) rotate(-7deg);opacity:0}
-  62%{opacity:.9}
-  72%{transform:translateX(68%) rotate(-7deg);opacity:.18}
-  100%{transform:translateX(68%) rotate(-7deg);opacity:0}
+  0%,58%{transform:translateX(-70%) rotate(-8deg);opacity:0}
+  62%{opacity:.85}
+  72%{transform:translateX(70%) rotate(-8deg);opacity:.15}
+  100%{transform:translateX(70%) rotate(-8deg);opacity:0}
 }
-@media(prefers-reduced-motion:reduce){.powered::after{animation:none;opacity:.15;transform:none}}
+@media(prefers-reduced-motion:reduce){.powered::after{animation:none;opacity:.12;transform:none}}
 
 @media(max-width:900px){
   .main{padding:14px 11px calc(92px + env(safe-area-inset-bottom))}
@@ -82,7 +82,7 @@ button{touch-action:manipulation}
   .bottom{left:max(7px,env(safe-area-inset-left));right:max(7px,env(safe-area-inset-right));max-width:calc(100vw - 14px);scrollbar-width:none;-webkit-overflow-scrolling:touch}
   .bottom::-webkit-scrollbar{display:none}
   .bottom button{flex:0 0 auto}
-  .powered{width:min(100%,330px);border-radius:16px}
+  .powered{width:min(100%,200px);border-radius:13px}
 }
 
 @media(max-width:700px){
@@ -115,7 +115,7 @@ button{touch-action:manipulation}
   .modal>.card{width:calc(100vw - 14px);max-width:calc(100vw - 14px);max-height:calc(100dvh - 14px);border-radius:16px;padding:13px}
   .bottom button{min-width:68px;padding:8px 4px;font-size:9px}
   .pickers{grid-template-columns:1fr}
-  .powered{width:min(100%,310px);border-radius:15px}
+  .powered{width:min(100%,190px);border-radius:12px}
 }
 
 @media(max-width:380px){
@@ -124,7 +124,7 @@ button{touch-action:manipulation}
   .actions{grid-template-columns:1fr!important}
   .bottom button{min-width:62px;font-size:9px}
   .small,.muted{font-size:11px}
-  .powered{width:min(100%,285px);border-radius:14px}
+  .powered{width:min(100%,178px);border-radius:11px}
 }
 
 @media(orientation:landscape) and (max-height:520px){
