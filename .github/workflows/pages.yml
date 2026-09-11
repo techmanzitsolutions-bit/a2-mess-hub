@@ -1,4 +1,4 @@
-name: Deploy Preview
+name: Deploy A2 MESS HUB PWA
 
 on:
   push:
@@ -22,12 +22,177 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare latest A2 MESS HUB web app
+        run: |
+          # Reuse the same feature patch that produces the signed Android build,
+          # so iPhone/Android PWA users see the same Expense Columns/member dashboard.
+          git show adc9c41d296912d71f147431aaf636fbe80b9602:.github/workflows/build-expense-columns.yml > /tmp/feature-build.yml
+          python - <<'PY'
+          from pathlib import Path
+          lines=Path('/tmp/feature-build.yml').read_text().splitlines()
+          start=next(i for i,x in enumerate(lines) if x.strip()=='- name: Create Android project')
+          py_start=next(i for i in range(start+1,len(lines)) if lines[i].strip()=="python - <<'PY'")
+          py_end=next(i for i in range(py_start+1,len(lines)) if lines[i].strip()=='PY')
+          body='\n'.join(x[10:] if x.startswith('          ') else x for x in lines[py_start+1:py_end])+'\n'
+          Path('/tmp/feature-patch.py').write_text(body)
+          PY
+          mkdir -p /tmp/a2-pwa/www
+          cp -r www/. /tmp/a2-pwa/www/
+          cd /tmp/a2-pwa
+          python /tmp/feature-patch.py
+
+      - name: Add installable PWA and automatic updates
+        run: |
+          cd /tmp/a2-pwa/www
+
+          cat > manifest.webmanifest <<'EOF'
+          {
+            "id": "./",
+            "name": "A2 MESS HUB",
+            "short_name": "A2 MESS HUB",
+            "description": "Eat • Track • Manage • Sync — Powered by TECHMANZ",
+            "start_url": "./",
+            "scope": "./",
+            "display": "standalone",
+            "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+            "orientation": "portrait-primary",
+            "background_color": "#020907",
+            "theme_color": "#06140f",
+            "categories": ["business", "productivity", "food"],
+            "icons": [
+              {
+                "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='192' height='192' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='42' fill='%2306140f'/%3E%3Ccircle cx='96' cy='96' r='72' fill='%230b2a1e' stroke='%23f5ca64' stroke-width='5'/%3E%3Ctext x='96' y='115' text-anchor='middle' font-family='Arial,sans-serif' font-size='68' font-weight='900' fill='%23f5ca64'%3EA2%3C/text%3E%3C/svg%3E",
+                "sizes": "192x192",
+                "type": "image/svg+xml",
+                "purpose": "any maskable"
+              },
+              {
+                "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%2306140f'/%3E%3Ccircle cx='256' cy='256' r='192' fill='%230b2a1e' stroke='%23f5ca64' stroke-width='14'/%3E%3Ctext x='256' y='310' text-anchor='middle' font-family='Arial,sans-serif' font-size='182' font-weight='900' fill='%23f5ca64'%3EA2%3C/text%3E%3C/svg%3E",
+                "sizes": "512x512",
+                "type": "image/svg+xml",
+                "purpose": "any maskable"
+              }
+            ]
+          }
+          EOF
+
+          cat > pwa.js <<'EOF'
+          (() => {
+            const standalone = matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+            const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+            let reloading = false;
+
+            if ('serviceWorker' in navigator) {
+              window.addEventListener('load', async () => {
+                try {
+                  const reg = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+                  reg.update().catch(() => {});
+                  setInterval(() => reg.update().catch(() => {}), 60 * 60 * 1000);
+                } catch (e) {
+                  console.warn('A2 PWA service worker registration failed', e);
+                }
+              });
+              navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (reloading) return;
+                reloading = true;
+                location.reload();
+              });
+            }
+
+            function banner(html, buttonText, onClick) {
+              if (document.getElementById('a2-install-banner')) return;
+              const box = document.createElement('div');
+              box.id = 'a2-install-banner';
+              box.style.cssText = 'position:fixed;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));z-index:99999;background:#092319f2;color:#effff8;border:1px solid #f5ca6455;border-radius:16px;padding:12px 14px;box-shadow:0 14px 40px #0009;font:13px system-ui,-apple-system,Segoe UI,Roboto;display:flex;gap:12px;align-items:center;backdrop-filter:blur(14px)';
+              box.innerHTML = `<div style="flex:1;line-height:1.4">${html}</div><button type="button" style="border:0;border-radius:11px;padding:10px 12px;background:#f5ca64;color:#071912;font-weight:900;white-space:nowrap">${buttonText}</button><button type="button" aria-label="Close" style="border:0;background:transparent;color:#9fc5b6;font-size:20px;padding:4px">×</button>`;
+              const buttons = box.querySelectorAll('button');
+              buttons[0].onclick = onClick;
+              buttons[1].onclick = () => box.remove();
+              document.body.appendChild(box);
+            }
+
+            let deferredPrompt;
+            window.addEventListener('beforeinstallprompt', e => {
+              e.preventDefault();
+              deferredPrompt = e;
+              if (!standalone) banner('<b>A2 MESS HUB</b><br>Install once — future updates arrive automatically.', 'Install', async () => {
+                const p = deferredPrompt;
+                if (!p) return;
+                await p.prompt();
+                deferredPrompt = null;
+                document.getElementById('a2-install-banner')?.remove();
+              });
+            });
+
+            if (ios && !standalone && !sessionStorage.getItem('a2-ios-install-tip')) {
+              setTimeout(() => banner('<b>Install on iPhone</b><br>Safari → Share → Add to Home Screen. You only do this once.', 'Got it', () => {
+                sessionStorage.setItem('a2-ios-install-tip', '1');
+                document.getElementById('a2-install-banner')?.remove();
+              }), 1800);
+            }
+          })();
+          EOF
+
+          cat > sw.js <<'EOF'
+          const BUILD = '__BUILD_SHA__';
+          const CACHE = `a2-mess-hub-${BUILD}`;
+          const CORE = ['./', './index.html', './app.html', './mobile-fixes.css', './manifest.webmanifest', './pwa.js'];
+
+          self.addEventListener('install', event => {
+            event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));
+          });
+
+          self.addEventListener('activate', event => {
+            event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('a2-mess-hub-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+          });
+
+          self.addEventListener('fetch', event => {
+            if (event.request.method !== 'GET') return;
+            const url = new URL(event.request.url);
+            if (url.origin !== location.origin) return;
+
+            // Network-first keeps every phone on the newest deployed UI; cache is offline fallback.
+            event.respondWith(fetch(event.request).then(response => {
+              if (response && response.ok) {
+                const copy = response.clone();
+                caches.open(CACHE).then(cache => cache.put(event.request, copy));
+              }
+              return response;
+            }).catch(() => caches.match(event.request).then(cached => cached || caches.match('./index.html'))));
+          });
+          EOF
+          sed -i "s/__BUILD_SHA__/${GITHUB_SHA}/g" sw.js
+
+          python - <<'PY'
+          from pathlib import Path
+          head = '''<link rel="manifest" href="./manifest.webmanifest"><meta name="application-name" content="A2 MESS HUB"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="A2 MESS HUB">'''
+          script = '<script src="./pwa.js" defer></script>'
+          for name in ('index.html','app.html'):
+              p=Path(name)
+              s=p.read_text()
+              if 'manifest.webmanifest' not in s:
+                  s=s.replace('</head>', head+'\n</head>')
+              if 'src="./pwa.js"' not in s:
+                  s=s.replace('</body>', script+'\n</body>')
+              p.write_text(s)
+          PY
+
+          grep -q 'manifest.webmanifest' index.html
+          grep -q 'manifest.webmanifest' app.html
+          grep -q 'Total Receivable' app.html
+          grep -q 'Expense Name' app.html
+          grep -q 'bo3lvwuicj.ucarecd.net' app.html
+          grep -q "$GITHUB_SHA" sw.js
+
       - uses: actions/configure-pages@v5
         with:
           enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: ./www
-      - name: Deploy to GitHub Pages
+          path: /tmp/a2-pwa/www
+      - name: Deploy A2 MESS HUB PWA
         id: deployment
         uses: actions/deploy-pages@v4
