@@ -47,6 +47,9 @@ jobs:
       - name: Add monthly closing and carry forward
         run: python scripts/monthly-closing-patch.py
 
+      - name: Add member meal skip and kitchen counts
+        run: python scripts/meal-skip-patch.py
+
       - name: Validate app JavaScript and production features
         run: |
           python - <<'PY'
@@ -103,12 +106,22 @@ jobs:
             "closing:'Month Close'",
             'closing:monthClosePage',
             'A2-MESS-HUB-CLOSING-',
-            'AED 200 = 1.00 share · 100 = 0.50 · 250 = 1.25'
+            'AED 200 = 1.00 share · 100 = 0.50 · 250 = 1.25',
+            'function mealSkipPage(){',
+            'window.setMealSkip=async',
+            'window.cancelMealSkip=async',
+            'mealSkips',
+            "skipmeal:'Skip Meal'",
+            'skipmeal:mealSkipPage',
+            'Kitchen Meal Count',
+            'NO NEED / SKIP',
+            'Kitchen preparation started – skip closed.',
+            'Skip Meal changes cooking quantity only'
           ]
           missing=[x for x in required if x not in s]
           if missing:
               raise SystemExit('Missing production features: '+', '.join(missing))
-          print('Payments, totals, user/member linking, Cloudinary, ADNOC LPG, backup and monthly closing present')
+          print('Payments, totals, linking, Cloudinary, LPG, backup, closing and meal skip present')
           PY
           node --check /tmp/a2-app-check.mjs
 
