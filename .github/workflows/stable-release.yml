@@ -2,6 +2,8 @@ name: Build A2 MESS HUB Stable Release
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ main ]
 
 permissions:
   contents: read
