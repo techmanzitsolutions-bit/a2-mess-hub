@@ -29,10 +29,10 @@ jobs:
       - name: Prepare PWA
         run: python scripts/prepare-pwa.py "$GITHUB_SHA"
 
-      - name: Apply payment calculation fix
+      - name: Apply monthly payment consistency fix
         run: python scripts/payment-calculation-fix.py
 
-      - name: Validate app JavaScript
+      - name: Validate app JavaScript and payment logic
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -47,11 +47,21 @@ jobs:
               raise SystemExit('Module script end not found')
           js=s[start:b]
           Path('/tmp/a2-app-check.mjs').write_text(js)
-          required=['AED 100','PARTIAL','Paid Amount','Due Amount','function planValue(v)']
+          required=[
+            'function currentBillingMonth()',
+            'billingMonth',
+            'Member Balances',
+            'Payment Transactions',
+            'Total Receivable',
+            'Balance Due',
+            'paymentFormForMember',
+            'PARTIAL',
+            'api.cloudinary.com/v1_1/rtsrjhpm/image/upload'
+          ]
           missing=[x for x in required if x not in s]
           if missing:
-              raise SystemExit('Missing payment features: '+', '.join(missing))
-          print('Payment features present')
+              raise SystemExit('Missing production features: '+', '.join(missing))
+          print('Monthly payment and Cloudinary features present')
           PY
           node --check /tmp/a2-app-check.mjs
 
