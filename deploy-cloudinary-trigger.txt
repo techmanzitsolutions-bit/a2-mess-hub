@@ -1,0 +1,4 @@
+A2 MESS HUB Cloudinary deployment trigger
+Cloud: rtsrjhpm
+Preset: a2_mess_bills
+Deployment requested after Uploadcare verification mismatch.
