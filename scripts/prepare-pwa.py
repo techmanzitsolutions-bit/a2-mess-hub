@@ -14,7 +14,6 @@ for p in (ROOT / 'www').iterdir():
     if p.is_dir(): shutil.copytree(p, dst)
     else: shutil.copy2(p, dst)
 
-# Reuse the exact feature patch that produced the approved Expense Columns/member dashboard build.
 workflow = subprocess.check_output([
     'git','show',
     'adc9c41d296912d71f147431aaf636fbe80b9602:.github/workflows/build-expense-columns.yml'
@@ -30,12 +29,15 @@ subprocess.run([sys.executable, str(feature_patch)], cwd=OUT, check=True)
 
 app = WWW / 'app.html'
 s = app.read_text()
+
 marker = 'async function uploadBill(file){'
 if marker not in s:
     raise SystemExit('uploadBill function not found')
 start = s.index(marker)
 end = s.index('\nwindow.pickExpensePhoto', start)
 replacement = '''async function uploadBill(file){
+  if(!file)throw new Error('Choose a bill photo first');
+  if(file.type&&!file.type.startsWith('image/'))throw new Error('Bill file must be an image');
   const blob=await compressImage(file),fd=new FormData();
   fd.append('file',blob,'bill.jpg');
   fd.append('upload_preset','a2_mess_bills');
@@ -50,6 +52,25 @@ s = s[:start] + replacement + s[end:]
 s = s.replace('Bill photos sync live using Uploadcare','Bill photos sync live using Cloudinary')
 s = s.replace("imageProvider:billUrl?'uploadcare':'',updatedAt:serverTimestamp()", "imageProvider:billUrl?(billUrl.includes('res.cloudinary.com')?'cloudinary':(old.imageProvider||'uploadcare')):'',updatedAt:serverTimestamp()")
 s = s.replace("({billUrl,billFileId}=await uploadBill(f));", "{const uploaded=await uploadBill(f);billUrl=uploaded.billUrl;billFileId=uploaded.billFileId;}")
+
+s = s.replace(
+"import{getFirestore,doc,getDoc,setDoc,collection,onSnapshot,addDoc,updateDoc,deleteDoc,serverTimestamp,writeBatch}from'https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js';",
+"import{getFirestore,doc,getDoc,setDoc,collection,onSnapshot,addDoc,updateDoc,deleteDoc,serverTimestamp,writeBatch,query,where}from'https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js';")
+old_listen = "function listen(){state.unsubs.forEach(f=>f());state.unsubs=[];state.unsubs.push(onSnapshot(doc(db,'system','config'),s=>{state.config=s.data()||{};render()}));['members','inventory','meals','expenses','payments'].forEach(c=>state.unsubs.push(onSnapshot(collection(db,c),s=>{state.data[c]=s.docs.map(d=>({id:d.id,...d.data()}));render()})));if(state.profile.role==='admin')state.unsubs.push(onSnapshot(collection(db,'users'),s=>{state.data.users=s.docs.map(d=>({id:d.id,...d.data()}));render()}))}"
+new_listen = "function listen(){state.unsubs.forEach(f=>f());state.unsubs=[];state.unsubs.push(onSnapshot(doc(db,'system','config'),x=>{state.config=x.data()||{};render()},err));['members','inventory','meals','expenses'].forEach(c=>state.unsubs.push(onSnapshot(collection(db,c),x=>{state.data[c]=x.docs.map(d=>({id:d.id,...d.data()}));render()},err)));if(state.profile.role==='admin'){state.unsubs.push(onSnapshot(collection(db,'payments'),x=>{state.data.payments=x.docs.map(d=>({id:d.id,...d.data()}));render()},err));state.unsubs.push(onSnapshot(collection(db,'users'),x=>{state.data.users=x.docs.map(d=>({id:d.id,...d.data()}));render()},err))}else if(state.profile.role==='member'){state.unsubs.push(onSnapshot(query(collection(db,'payments'),where('uid','==',auth.currentUser.uid)),x=>{state.data.payments=x.docs.map(d=>({id:d.id,...d.data()}));render()},err))}else{state.data.payments=[]}}"
+if old_listen not in s:
+    raise SystemExit('listen function not found for final launch patch')
+s = s.replace(old_listen, new_listen)
+
+helper_marker = "function expenseDate(x){"
+preview_helper = "function billPreviewUrl(x,size=300){const u=resolvedBillUrl(x);if(!u)return '';if(u.includes('res.cloudinary.com/'))return u.replace('/upload/','/upload/f_auto,q_auto,c_limit,w_'+size+',h_'+size+'/');return u+'-/preview/'+size+'x'+size+'/'}\n"
+if preview_helper.strip() not in s:
+    if helper_marker not in s:
+        raise SystemExit('expenseDate marker not found')
+    s = s.replace(helper_marker, preview_helper + helper_marker)
+s = s.replace('src="${esc(u)}-/preview/300x300/"', 'src="${esc(billPreviewUrl(x,300))}"')
+s = s.replace("resolvedBillUrl(x)?resolvedBillUrl(x)+'-/preview/800x800/':''", "billPreviewUrl(x,800)")
+
 app.write_text(s)
 
 manifest = '''{
@@ -83,9 +104,14 @@ required = [
     "upload_preset','a2_mess_bills",
     'Total Receivable',
     'Expense Name',
-    'Added By'
+    'Added By',
+    "where('uid','==',auth.currentUser.uid)",
+    'function billPreviewUrl(x,size=300)',
+    "imageProvider:'cloudinary'"
 ]
 for token in required:
     if token not in final:
         raise SystemExit(f'Missing required feature: {token}')
-print('A2 MESS HUB PWA prepared successfully with Cloudinary storage')
+if 'src="${esc(u)}-/preview/300x300/"' in final:
+    raise SystemExit('Old Uploadcare-only expense thumbnail syntax still present')
+print('A2 MESS HUB PWA prepared successfully: Cloudinary + member payment privacy + compatible previews')
