@@ -56,6 +56,9 @@ jobs:
       - name: Add meal skip WhatsApp and email notifications
         run: python scripts/meal-skip-notification-patch.py
 
+      - name: Ensure realtime meal skip sync
+        run: python scripts/meal-skip-realtime-fix.py
+
       - name: Validate app JavaScript and production features
         run: |
           python - <<'PY'
@@ -129,12 +132,14 @@ jobs:
             'openMealSkipNotifications(',
             'Meal Skip Notification Setup',
             'WhatsApp Admin',
-            'Email Chef'
+            'Email Chef',
+            "onSnapshot(collection(db,'mealSkips')",
+            '● LIVE SYNC'
           ]
           missing=[x for x in required if x not in s]
           if missing:
               raise SystemExit('Missing production features: '+', '.join(missing))
-          print('Payments, totals, linking, Cloudinary, LPG, backup, closing, meal skip and notifications present')
+          print('Payments, totals, linking, Cloudinary, LPG, backup, closing, meal skip, notifications and realtime sync present')
           PY
           node --check /tmp/a2-app-check.mjs
 
