@@ -41,6 +41,9 @@ jobs:
       - name: Add ADNOC LPG order launcher
         run: python scripts/gas-order-patch.py
 
+      - name: Add admin monthly backup and restore
+        run: python scripts/monthly-backup-patch.py
+
       - name: Validate app JavaScript and production features
         run: |
           python - <<'PY'
@@ -79,12 +82,19 @@ jobs:
             'function gasOrder(){',
             'window.openAdnocGas=',
             'package=ae.gov.adnoc',
-            "gas:'Order Gas'"
+            "gas:'Order Gas'",
+            'function backupPage(){',
+            'window.downloadMonthlyBackup=',
+            'window.restoreMonthlyBackup=',
+            "backup:'Backup'",
+            'A2-MESS-HUB-MONTHLY-BACKUP',
+            'Expense bill-image links are included',
+            'backup:backupPage'
           ]
           missing=[x for x in required if x not in s]
           if missing:
               raise SystemExit('Missing production features: '+', '.join(missing))
-          print('Payments, totals, user/member linking, Cloudinary and ADNOC LPG launcher present')
+          print('Payments, totals, user/member linking, Cloudinary, ADNOC LPG launcher and monthly backup present')
           PY
           node --check /tmp/a2-app-check.mjs
 
