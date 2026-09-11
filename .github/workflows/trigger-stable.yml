@@ -32,7 +32,10 @@ jobs:
       - name: Apply monthly payment consistency fix
         run: python scripts/payment-calculation-fix.py
 
-      - name: Validate app JavaScript and payment logic
+      - name: Add ADNOC LPG order launcher
+        run: python scripts/gas-order-patch.py
+
+      - name: Validate app JavaScript and production features
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -56,12 +59,16 @@ jobs:
             'Balance Due',
             'paymentFormForMember',
             'PARTIAL',
-            'api.cloudinary.com/v1_1/rtsrjhpm/image/upload'
+            'api.cloudinary.com/v1_1/rtsrjhpm/image/upload',
+            'function gasOrder(){',
+            'window.openAdnocGas=',
+            'package=ae.gov.adnoc',
+            "gas:'Order Gas'"
           ]
           missing=[x for x in required if x not in s]
           if missing:
               raise SystemExit('Missing production features: '+', '.join(missing))
-          print('Monthly payment and Cloudinary features present')
+          print('Payments, Cloudinary and ADNOC LPG launcher present')
           PY
           node --check /tmp/a2-app-check.mjs
 
