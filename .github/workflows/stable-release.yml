@@ -3,6 +3,12 @@ name: Build A2 MESS HUB Stable Release
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+env:
+  APP_ID: com.a2messhub.app
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -10,113 +16,126 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
 
-      - name: Prepare latest A2 MESS HUB Android project
+      - name: Prepare latest Android project
         run: |
           git show adc9c41d296912d71f147431aaf636fbe80b9602:.github/workflows/build-expense-columns.yml > /tmp/feature-build.yml
           python - <<'PY'
           from pathlib import Path
           lines=Path('/tmp/feature-build.yml').read_text().splitlines()
           start=next(i for i,x in enumerate(lines) if x.strip()=='- name: Create Android project')
-          run=next(i for i in range(start+1,len(lines)) if lines[i].strip()=='run: |')
-          end=next(i for i in range(run+1,len(lines)) if lines[i].startswith('      - name: Verify expense columns'))
-          body='\n'.join(x[10:] if x.startswith('          ') else x for x in lines[run+1:end])+'\n'
-          Path('/tmp/prepare-android.sh').write_text(body)
+          py_start=next(i for i in range(start+1,len(lines)) if lines[i].strip()=="python - <<'PY'")
+          py_end=next(i for i in range(py_start+1,len(lines)) if lines[i].strip()=='PY')
+          body='\n'.join(x[10:] if x.startswith('          ') else x for x in lines[py_start+1:py_end])+'\n'
+          Path('/tmp/feature-patch.py').write_text(body)
           PY
-          bash /tmp/prepare-android.sh
+          python /tmp/feature-patch.py
 
-      - name: Set update version
+      - name: Switch bill photo uploads to Cloudinary
         run: |
           python - <<'PY'
           from pathlib import Path
-          import os,re
-          p=Path('mobile/android/app/build.gradle')
-          s=p.read_text()
-          code=20000+int(os.environ['GITHUB_RUN_NUMBER'])
-          s,n=re.subn(r'versionCode\s+\d+',f'versionCode {code}',s,count=1)
-          if n!=1: raise SystemExit('versionCode patch failed')
-          s,n=re.subn(r'versionName\s+"[^"]+"',f'versionName "4.{os.environ["GITHUB_RUN_NUMBER"]}"',s,count=1)
-          if n!=1: raise SystemExit('versionName patch failed')
-          p.write_text(s)
-          print('versionCode',code)
+          candidates=[Path('www/app.html'),Path('android/app/src/main/assets/public/app.html')]
+          for p in candidates:
+              if not p.exists():
+                  continue
+              s=p.read_text()
+              marker="async function uploadBill(file){"
+              if marker not in s:
+                  continue
+              start=s.index(marker)
+              end=s.index("\nwindow.pickExpensePhoto", start)
+              replacement='''async function uploadBill(file){
+  const blob=await compressImage(file),fd=new FormData();
+  fd.append('file',blob,'bill.jpg');
+  fd.append('upload_preset','a2_mess_bills');
+  fd.append('folder','A2-MESS-HUB/Bills');
+  const res=await fetch('https://api.cloudinary.com/v1_1/rtsrjhpm/image/upload',{method:'POST',body:fd});
+  if(!res.ok){let detail='';try{detail=await res.text()}catch{}throw new Error('Photo upload failed ('+res.status+')'+(detail?' '+detail.slice(0,140):''))}
+  const j=await res.json();
+  if(!j.secure_url||!j.public_id)throw new Error('Upload completed but Cloudinary did not return a photo URL');
+  return{billUrl:j.secure_url,billFileId:j.public_id,imageProvider:'cloudinary'}
+}'''
+              s=s[:start]+replacement+s[end:]
+              s=s.replace('Bill photos sync live using Uploadcare','Bill photos sync live using Cloudinary')
+              s=s.replace("imageProvider:billUrl?'uploadcare':'',updatedAt:serverTimestamp()", "imageProvider:billUrl?(billUrl.includes('res.cloudinary.com')?'cloudinary':(old.imageProvider||'uploadcare')):'',updatedAt:serverTimestamp()")
+              s=s.replace("({billUrl,billFileId}=await uploadBill(f));", "{const uploaded=await uploadBill(f);billUrl=uploaded.billUrl;billFileId=uploaded.billFileId;}")
+              p.write_text(s)
           PY
+
+      - name: Set update version
+        run: |
+          RUN=${GITHUB_RUN_NUMBER}
+          VERSION_CODE=$((20000 + RUN))
+          VERSION_NAME="4.${RUN}"
+          sed -i -E "s/versionCode [0-9]+/versionCode ${VERSION_CODE}/" android/app/build.gradle
+          sed -i -E "s/versionName \"[^\"]+\"/versionName \"${VERSION_NAME}\"/" android/app/build.gradle
+          echo "VERSION_CODE=${VERSION_CODE}" >> "$GITHUB_ENV"
+          echo "VERSION_NAME=${VERSION_NAME}" >> "$GITHUB_ENV"
 
       - name: Verify required features
         run: |
-          grep -q "Expense Name" mobile/android/app/src/main/assets/public/app.html
-          grep -q "Added By" mobile/android/app/src/main/assets/public/app.html
-          grep -q "Read only" mobile/android/app/src/main/assets/public/app.html
-          grep -q "Total Receivable" mobile/android/app/src/main/assets/public/app.html
-          grep -q "bo3lvwuicj.ucarecd.net" mobile/android/app/src/main/assets/public/app.html
+          grep -R -q 'Expense Name' www android/app/src/main/assets/public
+          grep -R -q 'Added By' www android/app/src/main/assets/public
+          grep -R -q 'Read only' www android/app/src/main/assets/public
+          grep -R -q 'Total Receivable' www android/app/src/main/assets/public
+          grep -R -q 'api.cloudinary.com/v1_1/rtsrjhpm/image/upload' www android/app/src/main/assets/public
+          grep -R -q "upload_preset','a2_mess_bills" www android/app/src/main/assets/public
 
       - name: Build release APK
         run: |
-          cd mobile/android
+          cd android
           chmod +x gradlew
           ./gradlew assembleRelease
 
       - name: Sign with permanent A2 MESS HUB key
         env:
-          KEYSTORE_B64_RAW: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           STORE_PASS_RAW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS_RAW: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
           python - <<'PY'
-          import os, re, unicodedata, base64
-          from pathlib import Path
-
-          def clean(name, prefixes=()):
-              s = unicodedata.normalize('NFKC', os.environ.get(name, ''))
-              s = ''.join(ch for ch in s if unicodedata.category(ch) != 'Cf')
-              s = s.replace('\r','').replace('\n','').strip()
-              for prefix in prefixes:
-                  if s.lower().startswith(prefix.lower()):
-                      s = s[len(prefix):].strip()
-              s = s.strip(' \t\"\'“”‘’')
-              return s
-
-          store = clean('STORE_PASS_RAW', ('Store password:', 'ANDROID_KEYSTORE_PASSWORD='))
-          alias = clean('KEY_ALIAS_RAW', ('Alias:', 'ANDROID_KEY_ALIAS='))
-          b64 = clean('KEYSTORE_B64_RAW', ('ANDROID_KEYSTORE_BASE64=',))
-          b64 = re.sub(r'\s+', '', b64)
-
-          for label, value in [('keystore password', store), ('key alias', alias)]:
-              if not value:
-                  raise SystemExit(f'{label} secret is empty')
-              if not value.isascii():
-                  raise SystemExit(f'{label} secret still contains non-ASCII characters; re-enter the plain value only')
-
-          try:
-              raw = base64.b64decode(b64, validate=True)
-          except Exception as e:
-              raise SystemExit(f'keystore Base64 secret is invalid: {e}')
-          if not raw:
-              raise SystemExit('decoded keystore is empty')
-
-          Path('/tmp/a2messhub.jks').write_bytes(raw)
-          Path('/tmp/store-pass').write_text(store)
-          Path('/tmp/key-alias').write_text(alias)
-          print('Signing secrets normalized and validated without exposing values.')
+          import os, base64, pathlib, unicodedata, re
+          b64=''.join(os.environ['KEYSTORE_B64'].split())
+          pathlib.Path('/tmp/a2messhub.jks').write_bytes(base64.b64decode(b64, validate=True))
+          def clean(v):
+              v=unicodedata.normalize('NFKC', v)
+              v=re.sub(r'[\u200B-\u200D\uFEFF]','',v)
+              return v.strip().strip('"').strip("'")
+          store=clean(os.environ['STORE_PASS_RAW'])
+          alias=clean(os.environ['KEY_ALIAS_RAW'])
+          if not store.isascii() or not alias.isascii():
+              raise SystemExit('Signing secret contains non-ASCII characters')
+          pathlib.Path('/tmp/storepass').write_text(store)
+          pathlib.Path('/tmp/keyalias').write_text(alias)
           PY
-
-          export STORE_PASS="$(cat /tmp/store-pass)"
-          export KEY_PASS="$STORE_PASS"
-          export KEY_ALIAS="$(cat /tmp/key-alias)"
-          TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
-          "$TOOLS/zipalign" -f -p 4 mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk /tmp/a2-aligned.apk
-          "$TOOLS/apksigner" sign --ks /tmp/a2messhub.jks --ks-key-alias "$KEY_ALIAS" --ks-pass env:STORE_PASS --key-pass env:KEY_PASS --out mobile/android/app/build/outputs/apk/release/A2-MESS-HUB-STABLE.apk /tmp/a2-aligned.apk
-          "$TOOLS/apksigner" verify --verbose --print-certs mobile/android/app/build/outputs/apk/release/A2-MESS-HUB-STABLE.apk
-          rm -f /tmp/a2messhub.jks /tmp/a2-aligned.apk /tmp/store-pass /tmp/key-alias
+          STORE_PASS="$(cat /tmp/storepass)"
+          KEY_ALIAS="$(cat /tmp/keyalias)"
+          BUILD_TOOLS="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
+          UNSIGNED="android/app/build/outputs/apk/release/app-release-unsigned.apk"
+          ZIPALIGNED="/tmp/A2-MESS-HUB-aligned.apk"
+          FINAL="/tmp/A2-MESS-HUB-STABLE.apk"
+          "$BUILD_TOOLS/zipalign" -f -v 4 "$UNSIGNED" "$ZIPALIGNED"
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks /tmp/a2messhub.jks \
+            --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass "pass:$STORE_PASS" \
+            --key-pass "pass:$STORE_PASS" \
+            --out "$FINAL" "$ZIPALIGNED"
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$FINAL"
+          cp "$FINAL" A2-MESS-HUB-STABLE.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: A2-MESS-HUB-STABLE-SIGNED-APK
-          path: mobile/android/app/build/outputs/apk/release/A2-MESS-HUB-STABLE.apk
+          path: A2-MESS-HUB-STABLE.apk
           if-no-files-found: error
