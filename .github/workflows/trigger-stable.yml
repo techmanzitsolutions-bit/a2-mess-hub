@@ -62,6 +62,9 @@ jobs:
       - name: Verify meal skip cloud writes
         run: python scripts/meal-skip-cloud-write-fix.py
 
+      - name: Apply 5 PM daily meal skip cutoff
+        run: python scripts/meal-skip-day-cutoff-patch.py
+
       - name: Validate app JavaScript and production features
         run: |
           python - <<'PY'
@@ -127,7 +130,6 @@ jobs:
             'skipmeal:mealSkipPage',
             'Kitchen Meal Count',
             'NO NEED / SKIP',
-            'Kitchen preparation started – skip closed.',
             'Skip Meal changes cooking quantity only',
             'MEAL SKIP QUICK ACTION',
             'Skip Meal / No Need',
@@ -140,12 +142,17 @@ jobs:
             '● LIVE SYNC',
             'Cloud verification failed',
             'skip saved to cloud ✅',
-            'NO NEED · CLOUD SAVED'
+            'NO NEED · CLOUD SAVED',
+            "const mealSkipDayCutoff='17:00'",
+            'Today’s skip closes at 5:00 PM',
+            'mealSkipDateAllowed(date)',
+            'Daily skip cutoff 17:00',
+            'defaultDate=afterCutoff?uaeDateKey(1):uaeDateKey(0)'
           ]
           missing=[x for x in required if x not in s]
           if missing:
               raise SystemExit('Missing production features: '+', '.join(missing))
-          print('Payments, totals, linking, Cloudinary, LPG, backup, closing, meal skip, notifications, realtime sync and verified cloud writes present')
+          print('A2 MESS HUB production features and 5 PM meal skip cutoff present')
           PY
           node --check /tmp/a2-app-check.mjs
 
