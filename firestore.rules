@@ -49,12 +49,16 @@ service cloud.firestore {
       allow read: if signedIn();
       allow create: if member()
                     && request.resource.data.uid == request.auth.uid
-                    && request.resource.data.status == 'SKIPPED';
+                    && request.resource.data.status == 'SKIPPED'
+                    && request.resource.data.cutoffAt > request.time;
       allow update: if member()
                     && resource.data.uid == request.auth.uid
-                    && request.resource.data.uid == request.auth.uid;
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.cutoffAt > request.time;
       allow delete: if admin()
-                    || (member() && resource.data.uid == request.auth.uid);
+                    || (member()
+                        && resource.data.uid == request.auth.uid
+                        && resource.data.cutoffAt > request.time);
     }
     match /expenses/{id} {
       allow read: if signedIn();
