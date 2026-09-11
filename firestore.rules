@@ -7,6 +7,7 @@ service cloud.firestore {
     function role(){ return hasProfile() ? get(userPath()).data.role : null; }
     function admin(){ return signedIn() && role() == 'admin'; }
     function chef(){ return signedIn() && role() == 'chef'; }
+    function member(){ return signedIn() && role() == 'member'; }
     function initialized(){ return exists(/databases/$(database)/documents/system/config); }
 
     match /system/config {
@@ -43,6 +44,17 @@ service cloud.firestore {
       allow read: if signedIn();
       allow create, update: if admin() || chef();
       allow delete: if admin();
+    }
+    match /mealSkips/{id} {
+      allow read: if signedIn();
+      allow create: if member()
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.status == 'SKIPPED';
+      allow update: if member()
+                    && resource.data.uid == request.auth.uid
+                    && request.resource.data.uid == request.auth.uid;
+      allow delete: if admin()
+                    || (member() && resource.data.uid == request.auth.uid);
     }
     match /expenses/{id} {
       allow read: if signedIn();
