@@ -27,8 +27,6 @@ jobs:
 
       - name: Prepare latest A2 MESS HUB web app
         run: |
-          # Reuse the same feature patch that produces the signed Android build,
-          # so iPhone/Android PWA users see the same Expense Columns/member dashboard.
           git show adc9c41d296912d71f147431aaf636fbe80b9602:.github/workflows/build-expense-columns.yml > /tmp/feature-build.yml
           python - <<'PY'
           from pathlib import Path
@@ -43,6 +41,42 @@ jobs:
           cp -r www/. /tmp/a2-pwa/www/
           cd /tmp/a2-pwa
           python /tmp/feature-patch.py
+
+      - name: Switch bill photo uploads to Cloudinary
+        run: |
+          cd /tmp/a2-pwa/www
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('app.html')
+          s=p.read_text()
+          cloud_name='rtsrjhpm'
+          preset='a2_mess_bills'
+          marker="async function uploadBill(file){"
+          if marker not in s:
+              raise SystemExit('uploadBill function not found')
+          start=s.index(marker)
+          end=s.index("\nwindow.pickExpensePhoto", start)
+          replacement=f'''async function uploadBill(file){{
+  const blob=await compressImage(file),fd=new FormData();
+  fd.append('file',blob,'bill.jpg');
+  fd.append('upload_preset','{preset}');
+  fd.append('folder','A2-MESS-HUB/Bills');
+  const res=await fetch('https://api.cloudinary.com/v1_1/{cloud_name}/image/upload',{{method:'POST',body:fd}});
+  if(!res.ok){{let detail='';try{{detail=await res.text()}}catch{{}}throw new Error('Photo upload failed ('+res.status+')'+(detail?' '+detail.slice(0,140):''))}}
+  const j=await res.json();
+  if(!j.secure_url||!j.public_id)throw new Error('Upload completed but Cloudinary did not return a photo URL');
+  return{{billUrl:j.secure_url,billFileId:j.public_id,imageProvider:'cloudinary'}}
+}}'''
+          s=s[:start]+replacement+s[end:]
+          s=s.replace('Bill photos sync live using Uploadcare','Bill photos sync live using Cloudinary')
+          s=s.replace("imageProvider:billUrl?'uploadcare':'',updatedAt:serverTimestamp()", "imageProvider:billUrl?(billUrl.includes('res.cloudinary.com')?'cloudinary':(old.imageProvider||'uploadcare')):'',updatedAt:serverTimestamp()")
+          s=s.replace("({billUrl,billFileId}=await uploadBill(f));", "{const uploaded=await uploadBill(f);billUrl=uploaded.billUrl;billFileId=uploaded.billFileId;}")
+          s=s.replace("<h3>Live Bill Photo Storage</h3><div class=ok>✅ Uploadcare live photo storage enabled.</div><div class=form style=\"margin-top:12px\"><div class=\"field span2\"><label>Uploadcare Public Key</label><input id=uckey value=\"${esc(state.config.uploadcarePublicKey||DEFAULT_UPLOADCARE_KEY)}\"></div><div class=span2><button class=btn onclick=savePhotoSettings()>SAVE PHOTO STORAGE</button></div></div>", "<h3>Live Bill Photo Storage</h3><div class=ok>✅ Cloudinary Free storage enabled for new bill photos.</div><p class=muted>Cloud: rtsrjhpm · Preset: a2_mess_bills<br>Existing Uploadcare bill links remain supported.</p>")
+          p.write_text(s)
+          PY
+          grep -q 'api.cloudinary.com/v1_1/rtsrjhpm/image/upload' app.html
+          grep -q "upload_preset','a2_mess_bills" app.html
+          grep -q 'Cloudinary Free storage enabled' app.html
 
       - name: Add installable PWA and automatic updates
         run: |
@@ -154,7 +188,6 @@ jobs:
             const url = new URL(event.request.url);
             if (url.origin !== location.origin) return;
 
-            // Network-first keeps every phone on the newest deployed UI; cache is offline fallback.
             event.respondWith(fetch(event.request).then(response => {
               if (response && response.ok) {
                 const copy = response.clone();
@@ -184,7 +217,7 @@ jobs:
           grep -q 'manifest.webmanifest' app.html
           grep -q 'Total Receivable' app.html
           grep -q 'Expense Name' app.html
-          grep -q 'bo3lvwuicj.ucarecd.net' app.html
+          grep -q 'api.cloudinary.com/v1_1/rtsrjhpm/image/upload' app.html
           grep -q "$GITHUB_SHA" sw.js
 
       - uses: actions/configure-pages@v5
