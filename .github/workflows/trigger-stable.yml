@@ -53,6 +53,9 @@ jobs:
       - name: Force member Skip Meal visibility
         run: python scripts/member-skip-visibility-fix.py
 
+      - name: Add meal skip WhatsApp and email notifications
+        run: python scripts/meal-skip-notification-patch.py
+
       - name: Validate app JavaScript and production features
         run: |
           python - <<'PY'
@@ -121,12 +124,17 @@ jobs:
             'Kitchen preparation started – skip closed.',
             'Skip Meal changes cooking quantity only',
             'MEAL SKIP QUICK ACTION',
-            'Skip Meal / No Need'
+            'Skip Meal / No Need',
+            'function mealSkipAlertMessage(',
+            'openMealSkipNotifications(',
+            'Meal Skip Notification Setup',
+            'WhatsApp Admin',
+            'Email Chef'
           ]
           missing=[x for x in required if x not in s]
           if missing:
               raise SystemExit('Missing production features: '+', '.join(missing))
-          print('Payments, totals, linking, Cloudinary, LPG, backup, closing and meal skip present')
+          print('Payments, totals, linking, Cloudinary, LPG, backup, closing, meal skip and notifications present')
           PY
           node --check /tmp/a2-app-check.mjs
 
