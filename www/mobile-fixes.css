@@ -14,18 +14,26 @@ button{touch-action:manipulation}
 .bottom{padding-bottom:max(6px,env(safe-area-inset-bottom))}
 .billpreview img{width:100%;height:auto;max-height:52dvh;object-fit:contain}
 
-/* TECH MANZ powered-by branding */
+/* TECH MANZ powered-by branding — show the FULL artwork on every device */
 .powered{
   position:relative;
-  width:min(100%,340px);
-  height:112px;
+  display:block;
+  width:min(100%,360px);
+  aspect-ratio:3/2;
+  height:auto!important;
+  min-height:0;
   margin:18px auto 10px!important;
-  padding:0;
+  padding:0!important;
   overflow:hidden;
   border-radius:18px;
   border:1px solid rgba(68,190,255,.55);
-  background:#04111d url('./techmanz-logo.jpg') center/cover no-repeat;
+  background-color:#04111d;
+  background-image:url('./techmanz-logo.jpg');
+  background-position:center;
+  background-size:contain;
+  background-repeat:no-repeat;
   font-size:0!important;
+  line-height:0!important;
   color:transparent!important;
   box-shadow:0 0 16px rgba(0,156,255,.38),0 0 32px rgba(255,126,45,.18),inset 0 0 20px rgba(74,184,255,.12);
   isolation:isolate;
@@ -33,25 +41,25 @@ button{touch-action:manipulation}
 .powered::before{
   content:'POWERED BY';
   position:absolute;
-  left:12px;
+  left:10px;
   top:9px;
-  z-index:2;
+  z-index:3;
   padding:4px 8px;
   border-radius:999px;
-  background:rgba(1,10,20,.72);
+  background:rgba(1,10,20,.76);
   border:1px solid rgba(87,202,255,.45);
   color:#dff7ff;
   font:800 9px/1.1 Inter,system-ui,sans-serif;
-  letter-spacing:1.8px;
+  letter-spacing:1.6px;
   text-shadow:0 0 8px #35bfff;
 }
 .powered::after{
   content:'';
   position:absolute;
   inset:-35%;
-  z-index:1;
-  background:linear-gradient(115deg,transparent 42%,rgba(65,199,255,.0) 46%,rgba(83,207,255,.7) 49%,#fff 50%,rgba(255,142,55,.75) 51%,rgba(255,142,55,0) 54%,transparent 58%);
-  transform:translateX(-62%) rotate(-7deg);
+  z-index:2;
+  background:linear-gradient(115deg,transparent 42%,rgba(65,199,255,0) 46%,rgba(83,207,255,.72) 49%,#fff 50%,rgba(255,142,55,.75) 51%,rgba(255,142,55,0) 54%,transparent 58%);
+  transform:translateX(-68%) rotate(-7deg);
   mix-blend-mode:screen;
   animation:techmanzLightning 3.2s ease-in-out infinite;
   pointer-events:none;
@@ -62,7 +70,7 @@ button{touch-action:manipulation}
   72%{transform:translateX(68%) rotate(-7deg);opacity:.18}
   100%{transform:translateX(68%) rotate(-7deg);opacity:0}
 }
-@media(prefers-reduced-motion:reduce){.powered::after{animation:none;opacity:.18;transform:none}}
+@media(prefers-reduced-motion:reduce){.powered::after{animation:none;opacity:.15;transform:none}}
 
 @media(max-width:900px){
   .main{padding:14px 11px calc(92px + env(safe-area-inset-bottom))}
@@ -74,6 +82,7 @@ button{touch-action:manipulation}
   .bottom{left:max(7px,env(safe-area-inset-left));right:max(7px,env(safe-area-inset-right));max-width:calc(100vw - 14px);scrollbar-width:none;-webkit-overflow-scrolling:touch}
   .bottom::-webkit-scrollbar{display:none}
   .bottom button{flex:0 0 auto}
+  .powered{width:min(100%,330px);border-radius:16px}
 }
 
 @media(max-width:700px){
@@ -106,7 +115,7 @@ button{touch-action:manipulation}
   .modal>.card{width:calc(100vw - 14px);max-width:calc(100vw - 14px);max-height:calc(100dvh - 14px);border-radius:16px;padding:13px}
   .bottom button{min-width:68px;padding:8px 4px;font-size:9px}
   .pickers{grid-template-columns:1fr}
-  .powered{height:96px;width:min(100%,300px);border-radius:15px}
+  .powered{width:min(100%,310px);border-radius:15px}
 }
 
 @media(max-width:380px){
@@ -115,7 +124,7 @@ button{touch-action:manipulation}
   .actions{grid-template-columns:1fr!important}
   .bottom button{min-width:62px;font-size:9px}
   .small,.muted{font-size:11px}
-  .powered{height:88px}
+  .powered{width:min(100%,285px);border-radius:14px}
 }
 
 @media(orientation:landscape) and (max-height:520px){
