@@ -32,6 +32,9 @@ jobs:
       - name: Apply monthly payment consistency fix
         run: python scripts/payment-calculation-fix.py
 
+      - name: Add global receivable totals
+        run: python scripts/global-receivables-patch.py
+
       - name: Add ADNOC LPG order launcher
         run: python scripts/gas-order-patch.py
 
@@ -59,6 +62,12 @@ jobs:
             'Balance Due',
             'paymentFormForMember',
             'PARTIAL',
+            'function globalPaymentSummary(',
+            'Total Receivable (All Members)',
+            'Total Received (All Members)',
+            'Balance Pending (All Members)',
+            "metric('Total Received'",
+            "metric('Balance Pending'",
             'api.cloudinary.com/v1_1/rtsrjhpm/image/upload',
             'function gasOrder(){',
             'window.openAdnocGas=',
@@ -68,7 +77,7 @@ jobs:
           missing=[x for x in required if x not in s]
           if missing:
               raise SystemExit('Missing production features: '+', '.join(missing))
-          print('Payments, Cloudinary and ADNOC LPG launcher present')
+          print('Payments, global totals, Cloudinary and ADNOC LPG launcher present')
           PY
           node --check /tmp/a2-app-check.mjs
 
