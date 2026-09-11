@@ -37,11 +37,15 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           s=Path('/tmp/a2-pwa/www/app.html').read_text()
-          a=s.find('<script type="module">')
-          b=s.rfind('</script>')
-          if a < 0 or b < 0 or b <= a:
+          marker='<script type="module">'
+          a=s.find(marker)
+          if a < 0:
               raise SystemExit('Module script not found')
-          js=s[a+22:b]
+          start=a+len(marker)
+          b=s.find('</script>',start)
+          if b < 0:
+              raise SystemExit('Module script end not found')
+          js=s[start:b]
           Path('/tmp/a2-app-check.mjs').write_text(js)
           required=['AED 100','PARTIAL','Paid Amount','Due Amount','function planValue(v)']
           missing=[x for x in required if x not in s]
