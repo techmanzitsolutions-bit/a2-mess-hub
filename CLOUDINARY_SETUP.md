@@ -14,7 +14,7 @@ Behavior:
 - Existing Uploadcare URLs remain readable for historical expense records.
 - PWA and future stable APK builds use the same Cloudinary upload configuration.
 
-Security notes:
+Security:
 
-- Never commit a Cloudinary API Secret.
-- Browser/mobile clients only use the cloud name and unsigned upload preset.
+- No Cloudinary API Secret is stored in the repository or client app.
+- Browser/mobile clients only use the public cloud name and unsigned upload preset.
