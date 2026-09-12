@@ -77,6 +77,9 @@ jobs:
       - name: Apply full V5 approved app UI
         run: python scripts/v5-full-ui-patch.py
 
+      - name: Restore member skip quick action in V5 shell
+        run: python scripts/v5-member-quick-action-fix.py
+
       - name: Validate app JavaScript and production features
         run: |
           python - <<'PY'
