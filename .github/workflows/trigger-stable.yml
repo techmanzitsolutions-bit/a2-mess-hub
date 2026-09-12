@@ -65,6 +65,9 @@ jobs:
       - name: Apply kitchen preparation meal skip cutoffs
         run: python scripts/meal-skip-day-cutoff-patch.py
 
+      - name: Add expense search filters and ordered sorting
+        run: python scripts/expense-search-sort-filter-patch.py
+
       - name: Validate app JavaScript and production features
         run: |
           python - <<'PY'
@@ -72,88 +75,14 @@ jobs:
           s=Path('/tmp/a2-pwa/www/app.html').read_text()
           marker='<script type="module">'
           a=s.find(marker)
-          if a < 0:
-              raise SystemExit('Module script not found')
-          start=a+len(marker)
-          b=s.find('</script>',start)
-          if b < 0:
-              raise SystemExit('Module script end not found')
-          js=s[start:b]
-          Path('/tmp/a2-app-check.mjs').write_text(js)
-          required=[
-            'function currentBillingMonth()',
-            'billingMonth',
-            'Member Balances',
-            'Payment Transactions',
-            'Total Receivable',
-            'Balance Due',
-            'paymentFormForMember',
-            'PARTIAL',
-            'function globalPaymentSummary(',
-            'Total Receivable (All Members)',
-            'Total Received (All Members)',
-            'Balance Pending (All Members)',
-            "metric('Total Received'",
-            "metric('Balance Pending'",
-            'function linkedMemberForUser(u)',
-            'Link with Member',
-            'Reset Password',
-            'window.resetUser=async email=>',
-            'User created and member linked',
-            'member record kept',
-            'api.cloudinary.com/v1_1/rtsrjhpm/image/upload',
-            'function gasOrder(){',
-            'window.openAdnocGas=',
-            'package=ae.gov.adnoc',
-            "gas:'Order Gas'",
-            'function backupPage(){',
-            'window.downloadMonthlyBackup=',
-            'window.restoreMonthlyBackup=',
-            "backup:'Backup'",
-            'A2-MESS-HUB-MONTHLY-BACKUP',
-            'Expense bill-image links are included',
-            'backup:backupPage',
-            'function monthClosePage(){',
-            'function closingPreview(month){',
-            'window.closeSelectedMonth=async',
-            'monthlyClosings',
-            'carryToMonth',
-            "closing:'Month Close'",
-            'closing:monthClosePage',
-            'A2-MESS-HUB-CLOSING-',
-            'AED 200 = 1.00 share · 100 = 0.50 · 250 = 1.25',
-            'function mealSkipPage(){',
-            'window.setMealSkip=async',
-            'window.cancelMealSkip=async',
-            'mealSkips',
-            "skipmeal:'Skip Meal'",
-            'skipmeal:mealSkipPage',
-            'Kitchen Meal Count',
-            'NO NEED / SKIP',
-            'Skip Meal changes cooking quantity only',
-            'MEAL SKIP QUICK ACTION',
-            'Skip Meal / No Need',
-            'function mealSkipAlertMessage(',
-            'openMealSkipNotifications(',
-            'Meal Skip Notification Setup',
-            'WhatsApp Admin',
-            'Email Chef',
-            "onSnapshot(collection(db,'mealSkips')",
-            '● LIVE SYNC',
-            'Cloud verification failed',
-            'skip saved to cloud ✅',
-            'NO NEED · CLOUD SAVED',
-            "const mealPrepCutoff='17:00'",
-            "meal==='Lunch'",
-            'd.setDate(d.getDate()-1)',
-            'Date.now()<mealCutoffDate(date,meal).getTime()',
-            'Dinner and the next day’s Lunch are prepared together',
-            'Prepared previous evening'
-          ]
+          if a < 0: raise SystemExit('Module script not found')
+          start=a+len(marker); b=s.find('</script>',start)
+          if b < 0: raise SystemExit('Module script end not found')
+          Path('/tmp/a2-app-check.mjs').write_text(s[start:b])
+          required=['function currentBillingMonth()','billingMonth','Total Receivable','Balance Due','PARTIAL','function globalPaymentSummary(','function linkedMemberForUser(u)','Reset Password','api.cloudinary.com/v1_1/rtsrjhpm/image/upload','function gasOrder(){','function backupPage(){','function monthClosePage(){','monthlyClosings','function mealSkipPage(){','mealSkips','Kitchen Meal Count','NO NEED / SKIP','MEAL SKIP QUICK ACTION','Cloud verification failed','skip saved to cloud ✅',"const mealPrepCutoff='17:00'",'Dinner and the next day’s Lunch are prepared together','Prepared previous evening','function expenseDateKey(x)','Search expense, category or amount','All Categories','Newest First','Amount: High → Low','No expenses match your search/filter.']
           missing=[x for x in required if x not in s]
-          if missing:
-              raise SystemExit('Missing production features: '+', '.join(missing))
-          print('A2 MESS HUB production features and kitchen meal preparation cutoffs present')
+          if missing: raise SystemExit('Missing production features: '+', '.join(missing))
+          print('A2 MESS HUB production features + expense search/filter/sort present')
           PY
           node --check /tmp/a2-app-check.mjs
 
