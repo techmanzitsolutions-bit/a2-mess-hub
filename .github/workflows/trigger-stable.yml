@@ -68,6 +68,9 @@ jobs:
       - name: Add expense search filters and ordered sorting
         run: python scripts/expense-search-sort-filter-patch.py
 
+      - name: Apply professional UI refresh
+        run: python scripts/pro-ui-refresh-patch.py
+
       - name: Validate app JavaScript and production features
         run: |
           python - <<'PY'
@@ -79,10 +82,10 @@ jobs:
           start=a+len(marker); b=s.find('</script>',start)
           if b < 0: raise SystemExit('Module script end not found')
           Path('/tmp/a2-app-check.mjs').write_text(s[start:b])
-          required=['function currentBillingMonth()','billingMonth','Total Receivable','Balance Due','PARTIAL','function globalPaymentSummary(','function linkedMemberForUser(u)','Reset Password','api.cloudinary.com/v1_1/rtsrjhpm/image/upload','function gasOrder(){','function backupPage(){','function monthClosePage(){','monthlyClosings','function mealSkipPage(){','mealSkips','Kitchen Meal Count','NO NEED / SKIP','MEAL SKIP QUICK ACTION','Cloud verification failed','skip saved to cloud ✅',"const mealPrepCutoff='17:00'",'Dinner and the next day’s Lunch are prepared together','Prepared previous evening','function expenseDateKey(x)','Search expense, category or amount','All Categories','Newest First','Amount: High → Low','No expenses match your search/filter.']
+          required=['function currentBillingMonth()','billingMonth','Total Receivable','Balance Due','PARTIAL','function globalPaymentSummary(','function linkedMemberForUser(u)','Reset Password','api.cloudinary.com/v1_1/rtsrjhpm/image/upload','function gasOrder(){','function backupPage(){','function monthClosePage(){','monthlyClosings','function mealSkipPage(){','mealSkips','Kitchen Meal Count','NO NEED / SKIP','MEAL SKIP QUICK ACTION','Cloud verification failed','skip saved to cloud ✅',"const mealPrepCutoff='17:00'",'Dinner and the next day’s Lunch are prepared together','Prepared previous evening','function expenseDateKey(x)','Search expense, category or amount','All Categories','Newest First','Amount: High → Low','No expenses match your search/filter.','id="a2-pro-ui"','page-${state.page}','page-meals .list','page-skipmeal .grid','Meal schedule · clear cards','Live cooking quantity based on member meal skips.']
           missing=[x for x in required if x not in s]
           if missing: raise SystemExit('Missing production features: '+', '.join(missing))
-          print('A2 MESS HUB production features + expense search/filter/sort present')
+          print('A2 MESS HUB production features + professional UI refresh present')
           PY
           node --check /tmp/a2-app-check.mjs
 
