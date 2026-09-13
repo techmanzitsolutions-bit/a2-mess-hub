@@ -94,3 +94,4 @@ jobs:
       - name: Deploy A2 MESS HUB PWA
         id: deployment
         uses: actions/deploy-pages@v4
+# deployment trigger: upgraded Spark UI
