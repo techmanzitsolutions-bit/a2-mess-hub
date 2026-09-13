@@ -88,3 +88,4 @@ service cloud.firestore {
     }
   }
 }
+// deployment trigger: Spark-safe access rules
