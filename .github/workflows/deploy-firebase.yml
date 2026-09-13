@@ -1,4 +1,4 @@
-name: Deploy Firebase Backend
+name: Deploy Firebase Firestore (Spark)
 
 on:
   workflow_dispatch:
