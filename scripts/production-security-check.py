@@ -18,6 +18,9 @@ checks = {
     'Rules require explicit active profile': 'profile().active == true' in rules,
     'Member data requires active login': 'match /members/{id} {\n      allow read: if active();' in rules,
     'Expense writes exclude Member': 'allow create: if admin() || chef();' in rules,
+    'Reference Members search/filter actions': 'setMemberView' in app and 'Search members…' in app,
+    'Reference Inventory search/filter actions': 'setInventoryView' in app and 'Low Stock (' in app,
+    'Reference Reports export actions': 'exportMemberReport' in app and 'exportExpenseReport' in app,
 }
 
 failed = [name for name, passed in checks.items() if not passed]
@@ -25,4 +28,3 @@ for name, passed in checks.items():
     print(f"{'PASS' if passed else 'FAIL'}: {name}")
 if failed:
     raise SystemExit('Production security checks failed: ' + ', '.join(failed))
-
