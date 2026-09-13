@@ -4,10 +4,12 @@ service cloud.firestore {
     function signedIn(){ return request.auth != null; }
     function userPath(){ return /databases/$(database)/documents/users/$(request.auth.uid); }
     function hasProfile(){ return signedIn() && exists(userPath()); }
-    function role(){ return hasProfile() ? get(userPath()).data.role : null; }
-    function admin(){ return signedIn() && role() == 'admin'; }
-    function chef(){ return signedIn() && role() == 'chef'; }
-    function member(){ return signedIn() && role() == 'member'; }
+    function profile(){ return hasProfile() ? get(userPath()).data : null; }
+    function active(){ return hasProfile() && profile().active == true && profile().removed != true; }
+    function role(){ return active() ? profile().role : null; }
+    function admin(){ return signedIn() && active() && role() == 'admin'; }
+    function chef(){ return signedIn() && active() && role() == 'chef'; }
+    function member(){ return signedIn() && active() && role() == 'member'; }
     function initialized(){ return exists(/databases/$(database)/documents/system/config); }
 
     match /system/config {
@@ -29,6 +31,10 @@ service cloud.firestore {
                         && request.resource.data.active == true);
       allow update: if admin();
       allow delete: if admin() && uid != request.auth.uid;
+    }
+
+    match /deletedUsers/{uid} {
+      allow read, write: if admin();
     }
 
     match /members/{id} {
