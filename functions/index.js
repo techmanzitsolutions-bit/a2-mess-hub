@@ -8,28 +8,72 @@ const db=admin.firestore();
 async function requireAdmin(auth){
   if(!auth) throw new HttpsError('unauthenticated','Login required');
   const snap=await db.collection('users').doc(auth.uid).get();
-  if(!snap.exists || snap.data().role!=='admin') throw new HttpsError('permission-denied','Admin only');
+  const profile=snap.data();
+  if(!snap.exists||profile.role!=='admin'||profile.active===false||profile.removed===true) throw new HttpsError('permission-denied','Active Admin only');
+  return profile;
 }
 
 exports.createManagedUser=onCall(async req=>{
   await requireAdmin(req.auth);
-  const {email,password,name,role,phone='',plan=''}=req.data||{};
-  if(!email||!password||!name||!['chef','member'].includes(role)) throw new HttpsError('invalid-argument','Valid name, email, password and chef/member role required');
-  const user=await admin.auth().createUser({email,password,displayName:name,disabled:false});
-  await db.collection('users').doc(user.uid).set({name,email,phone,plan,role,active:true,createdAt:admin.firestore.FieldValue.serverTimestamp()});
-  if(role==='member') await db.collection('members').doc(user.uid).set({uid:user.uid,name,email,phone,plan,status:'DUE',active:true,createdAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true});
-  return {uid:user.uid};
+  const {email,password,name,role,memberId=''}=req.data||{};
+  const normalizedEmail=String(email||'').trim().toLowerCase();
+  if(!normalizedEmail||!password||password.length<8||!name||!['chef','member'].includes(role)) throw new HttpsError('invalid-argument','Valid name, email, password (8+) and chef/member role required');
+  let member=null;
+  if(role==='member'){
+    if(!memberId) throw new HttpsError('invalid-argument','Member link required');
+    const ms=await db.collection('members').doc(memberId).get();
+    if(!ms.exists) throw new HttpsError('not-found','Member record not found');
+    member=ms.data();
+    if(String(member.uid||'').trim()) throw new HttpsError('already-exists','This member is already linked to a login');
+  }
+  let user;
+  try{
+    user=await admin.auth().createUser({email:normalizedEmail,password,displayName:name,disabled:false});
+    const batch=db.batch();
+    batch.set(db.collection('users').doc(user.uid),{uid:user.uid,name,email:normalizedEmail,role,memberId:role==='member'?memberId:'',active:true,removed:false,createdBy:req.auth.uid,createdAt:admin.firestore.FieldValue.serverTimestamp()});
+    if(role==='member') batch.set(db.collection('members').doc(memberId),{uid:user.uid,loginEmail:normalizedEmail,active:true,removed:false,updatedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true});
+    await batch.commit();
+    return {uid:user.uid};
+  }catch(e){
+    if(user?.uid) await admin.auth().deleteUser(user.uid).catch(()=>{});
+    if(e.code==='auth/email-already-exists') throw new HttpsError('already-exists','This email already has a Firebase login');
+    if(e instanceof HttpsError) throw e;
+    throw new HttpsError('internal',e.message||'User creation failed');
+  }
 });
 
 exports.updateManagedUser=onCall(async req=>{
   await requireAdmin(req.auth);
-  const {uid,role,disabled,name}=req.data||{};
+  const {uid,name,role,disabled,memberId}=req.data||{};
   if(!uid) throw new HttpsError('invalid-argument','uid required');
-  if(role && !['chef','member'].includes(role)) throw new HttpsError('invalid-argument','Only chef/member roles are assignable');
-  const patch={}; if(role)patch.role=role;if(name)patch.name=name;if(typeof disabled==='boolean')patch.active=!disabled;
-  await db.collection('users').doc(uid).set(patch,{merge:true});
-  const authPatch={};if(name)authPatch.displayName=name;if(typeof disabled==='boolean')authPatch.disabled=disabled;
-  if(Object.keys(authPatch).length)await admin.auth().updateUser(uid,authPatch);
+  if(role&&!['chef','member'].includes(role)) throw new HttpsError('invalid-argument','Only chef/member roles are assignable');
+  const ref=db.collection('users').doc(uid),snap=await ref.get();
+  if(!snap.exists) throw new HttpsError('not-found','User profile not found');
+  const old=snap.data(),patch={updatedAt:admin.firestore.FieldValue.serverTimestamp()};
+  if(name)patch.name=name;
+  if(role)patch.role=role;
+  if(memberId!==undefined)patch.memberId=memberId||'';
+  if(typeof disabled==='boolean'){patch.active=!disabled;patch.removed=false;}
+  await admin.auth().updateUser(uid,{...(name?{displayName:name}:{}),...(typeof disabled==='boolean'?{disabled}:{})});
+  const batch=db.batch();batch.set(ref,patch,{merge:true});
+  if(old.memberId&&memberId!==undefined&&old.memberId!==memberId)batch.set(db.collection('members').doc(old.memberId),{uid:'',loginEmail:'',updatedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true});
+  const target=memberId!==undefined?memberId:old.memberId;
+  if(target)batch.set(db.collection('members').doc(target),{uid,active:typeof disabled==='boolean'?!disabled:old.active!==false,updatedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true});
+  await batch.commit();
+  return {ok:true};
+});
+
+exports.deleteManagedUser=onCall(async req=>{
+  await requireAdmin(req.auth);
+  const {uid}=req.data||{};
+  if(!uid||uid===req.auth.uid) throw new HttpsError('invalid-argument','A different user uid is required');
+  const ref=db.collection('users').doc(uid),snap=await ref.get(),profile=snap.data()||{};
+  await admin.auth().deleteUser(uid).catch(e=>{if(e.code!=='auth/user-not-found')throw e});
+  const batch=db.batch();
+  batch.delete(ref);
+  if(profile.memberId)batch.set(db.collection('members').doc(profile.memberId),{uid:'',loginEmail:'',active:true,removed:false,updatedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true});
+  batch.set(db.collection('deletedUsers').doc(uid),{uid,email:profile.email||'',name:profile.name||'',deletedBy:req.auth.uid,deletedAt:admin.firestore.FieldValue.serverTimestamp()});
+  await batch.commit();
   return {ok:true};
 });
 
@@ -53,8 +97,4 @@ exports.sendWhatsApp=onCall({secrets:[whatsappToken,whatsappPhoneId]},async req=
   return body;
 });
 
-exports.queueDueReminder=onDocumentCreated('notifications/{id}',async e=>{
-  // Reserved automation hook. Actual WhatsApp sending is intentionally performed
-  // through sendWhatsApp after Meta credentials/templates are configured.
-  return e.data.ref.set({serverReceivedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true});
-});
+exports.queueDueReminder=onDocumentCreated('notifications/{id}',async e=>e.data.ref.set({serverReceivedAt:admin.firestore.FieldValue.serverTimestamp()},{merge:true}));
