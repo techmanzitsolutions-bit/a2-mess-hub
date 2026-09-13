@@ -71,6 +71,8 @@ jobs:
         run: python scripts/reference-ui-actions-patch.py
       - name: Apply premium live-data dashboard
         run: python scripts/dashboard-v6-patch.py
+      - name: Apply starter green/white UI style
+        run: python scripts/starter-style-ui-patch.py
       - name: Validate app JavaScript and production features
         run: |
           python - <<'PY'
@@ -81,10 +83,10 @@ jobs:
           start=a+len(marker); b=s.find('</script>',start)
           if b < 0: raise SystemExit('Module script end not found')
           Path('/tmp/a2-app-check.mjs').write_text(s[start:b])
-          required=['function currentBillingMonth()','billingMonth','Total Receivable','Balance Due','PARTIAL','function globalPaymentSummary(','function linkedMemberForUser(u)','Reset Password','api.cloudinary.com/v1_1/rtsrjhpm/image/upload','function gasOrder(){','function backupPage(){','function monthClosePage(){','monthlyClosings','function mealSkipPage(){','mealSkips','Kitchen Meal Count','NO NEED / SKIP','MEAL SKIP QUICK ACTION','Cloud verification failed','skip saved to cloud ✅',"const mealPrepCutoff='17:00'",'Dinner and the next day’s Lunch are prepared together','Prepared previous evening','function expenseDateKey(x)','Search expense, category or amount','All Categories','Newest First','Amount: High → Low','No expenses match your search/filter.','id="a2-pro-ui"','id="a2-premium-settings"','id="a2-v5-ui"','function morePage(){','v5-more-grid','Simple • Smart • Organized',"mobile=['dashboard','meals','expenses','reports','more']",'a2-shell-logo','page-${state.page}','function userRows()','Sync User List','window.repairLinkedUsers=async','Linked account detected','name="a2_new_login_email"','name="a2_new_login_password"','autocomplete="new-password"','auth/email-already-in-use','App profile removed only; Firebase Auth login still exists']
+          required=['function currentBillingMonth()','billingMonth','Total Receivable','Balance Due','PARTIAL','function globalPaymentSummary(','function linkedMemberForUser(u)','Reset Password','api.cloudinary.com/v1_1/rtsrjhpm/image/upload','function gasOrder(){','function backupPage(){','function monthClosePage(){','monthlyClosings','function mealSkipPage(){','mealSkips','Kitchen Meal Count','NO NEED / SKIP','MEAL SKIP QUICK ACTION','Cloud verification failed','skip saved to cloud ✅',"const mealPrepCutoff='17:00'",'Dinner and the next day’s Lunch are prepared together','Prepared previous evening','function expenseDateKey(x)','Search expense, category or amount','All Categories','Newest First','Amount: High → Low','No expenses match your search/filter.','id="a2-pro-ui"','id="a2-premium-settings"','id="a2-v5-ui"','id="a2-starter-green-ui"','function morePage(){','v5-more-grid','Simple • Smart • Organized',"mobile=['dashboard','meals','expenses','reports','more']",'a2-shell-logo','page-${state.page}','function userRows()','Sync User List','window.repairLinkedUsers=async','Linked account detected','name="a2_new_login_email"','name="a2_new_login_password"','autocomplete="new-password"','auth/email-already-in-use','App profile removed only; Firebase Auth login still exists']
           missing=[x for x in required if x not in s]
           if missing: raise SystemExit('Missing production features: '+', '.join(missing))
-          print('A2 MESS HUB production features + user auth consistency present')
+          print('A2 MESS HUB production features + starter green UI present')
           PY
           node --check /tmp/a2-app-check.mjs
       - name: Configure Pages
