@@ -67,6 +67,8 @@ jobs:
         run: python scripts/user-list-reconcile-patch.py
       - name: Apply production authentication hardening
         run: python scripts/production-auth-hardening-patch.py
+      - name: Apply functional reference-screen actions
+        run: python scripts/reference-ui-actions-patch.py
       - name: Validate app JavaScript and production features
         run: |
           python - <<'PY'
