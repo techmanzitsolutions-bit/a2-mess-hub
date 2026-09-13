@@ -17,10 +17,19 @@ for app in paths:
         if init_marker not in s: raise SystemExit('Firebase initialization marker missing')
         s=s.replace(init_marker,init_marker+"\nconst functions=getFunctions(fb);",1)
 
-    listen_marker="function listen(){state.unsubs.forEach(f=>f());state.unsubs=[];"
-    guard="function listen(){state.unsubs.forEach(f=>f());state.unsubs=[];state.unsubs.push(onSnapshot(doc(db,'users',auth.currentUser.uid),async snap=>{if(window._accessClosing)return;const p=snap.data();if(!snap.exists()||p.active===false||p.removed===true){window._accessClosing=true;toast('Account disabled or removed by Admin');await signOut(auth);return}state.profile={uid:snap.id,...p};render()},err));"
-    if listen_marker not in s: raise SystemExit('Realtime listener marker missing')
-    s=s.replace(listen_marker,guard,1)
+    cleanup_marker="state.unsubs.forEach(f=>f());state.unsubs=[];"
+    meal_listener="state.unsubs.push(onSnapshot(collection(db,'mealSkips'),snap=>{state.data.mealSkips=snap.docs.map(d=>({id:d.id,...d.data()}));render()},e=>{console.error('mealSkips realtime listener',e);toast('Meal skip sync error')}));"
+    guard="state.unsubs.push(onSnapshot(doc(db,'users',auth.currentUser.uid),async snap=>{if(window._accessClosing)return;const p=snap.data();if(!snap.exists()||p.active===false||p.removed===true){window._accessClosing=true;toast('Account disabled or removed by Admin');await signOut(auth);return}state.profile={uid:snap.id,...p};render()},err));"
+    # The meal-skip patch historically placed its listener before cleanup, so it
+    # was immediately unsubscribed. Normalize the order while installing the
+    # access-revocation listener.
+    misplaced="function listen(){"+meal_listener+cleanup_marker
+    if misplaced in s:
+        s=s.replace(misplaced,"function listen(){"+cleanup_marker+meal_listener+guard,1)
+    elif "function listen(){"+cleanup_marker in s:
+        s=s.replace("function listen(){"+cleanup_marker,"function listen(){"+cleanup_marker+guard,1)
+    elif guard not in s:
+        raise SystemExit('Realtime listener marker missing')
 
     render_marker="function render(){"
     override=r'''
