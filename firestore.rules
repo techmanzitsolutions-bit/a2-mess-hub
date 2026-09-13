@@ -4,12 +4,10 @@ service cloud.firestore {
     function signedIn(){ return request.auth != null; }
     function userPath(){ return /databases/$(database)/documents/users/$(request.auth.uid); }
     function hasProfile(){ return signedIn() && exists(userPath()); }
-    function profile(){ return hasProfile() ? get(userPath()).data : null; }
-    function active(){ return hasProfile() && profile().active != false && profile().removed != true; }
-    function role(){ return active() ? profile().role : null; }
-    function admin(){ return signedIn() && active() && role() == 'admin'; }
-    function chef(){ return signedIn() && active() && role() == 'chef'; }
-    function member(){ return signedIn() && active() && role() == 'member'; }
+    function role(){ return hasProfile() ? get(userPath()).data.role : null; }
+    function admin(){ return signedIn() && role() == 'admin'; }
+    function chef(){ return signedIn() && role() == 'chef'; }
+    function member(){ return signedIn() && role() == 'member'; }
     function initialized(){ return exists(/databases/$(database)/documents/system/config); }
 
     match /system/config {
@@ -33,26 +31,22 @@ service cloud.firestore {
       allow delete: if admin() && uid != request.auth.uid;
     }
 
-    match /deletedUsers/{uid} {
-      allow read, write: if admin();
-    }
-
     match /members/{id} {
-      allow read: if active();
+      allow read: if signedIn();
       allow write: if admin();
     }
     match /inventory/{id} {
-      allow read: if active();
+      allow read: if signedIn();
       allow create, update: if admin() || chef();
       allow delete: if admin();
     }
     match /meals/{id} {
-      allow read: if active();
+      allow read: if signedIn();
       allow create, update: if admin() || chef();
       allow delete: if admin();
     }
     match /mealSkips/{id} {
-      allow read: if active();
+      allow read: if signedIn();
       allow create: if member()
                     && request.resource.data.uid == request.auth.uid
                     && request.resource.data.status == 'SKIPPED'
@@ -67,19 +61,19 @@ service cloud.firestore {
                         && resource.data.cutoffAt > request.time);
     }
     match /expenses/{id} {
-      allow read: if active();
-      allow create: if admin() || chef();
+      allow read: if signedIn();
+      allow create: if signedIn() && (admin() || chef());
       allow update, delete: if admin();
     }
     match /payments/{id} {
-      allow read: if active() && (admin() || resource.data.uid == request.auth.uid);
+      allow read: if signedIn() && (admin() || resource.data.uid == request.auth.uid);
       allow create, update, delete: if admin();
     }
     match /monthlyClosings/{month} {
       allow read, create, update, delete: if admin();
     }
     match /settings/{id} {
-      allow read: if active();
+      allow read: if signedIn();
       allow write: if admin();
     }
     match /notifications/{id} {
@@ -88,4 +82,3 @@ service cloud.firestore {
     }
   }
 }
-// deployment trigger: Spark-safe access rules
