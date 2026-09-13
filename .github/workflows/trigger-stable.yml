@@ -67,6 +67,8 @@ jobs:
         run: python scripts/user-list-reconcile-patch.py
       - name: Apply Spark-safe user access controls
         run: python scripts/spark-safe-user-access-patch.py
+      - name: Apply functional reference-screen actions
+        run: python scripts/reference-ui-actions-patch.py
       - name: Validate app JavaScript and production features
         run: |
           python - <<'PY'
