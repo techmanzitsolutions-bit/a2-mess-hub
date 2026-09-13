@@ -6,7 +6,8 @@ s=app.read_text()
 
 # Do not prefill a new login email from the Member record. Member contact email can be stale
 # and is not authoritative for Firebase Authentication.
-s=s.replace("<input id=uemail type=email value=\"${esc(linked?.email||'')}\">","<input id=uemail type=email value=\"${esc(u.email||'')}\" autocomplete=\"off\" placeholder=\"Login email\">")
+s=s.replace("<input id=uemail type=email value=\"${esc(linked?.email||'')}\">","<input id=uemail name=\"a2_new_login_email\" type=email value=\"\" autocomplete=\"new-password\" autocapitalize=\"none\" spellcheck=\"false\" readonly onfocus=\"this.removeAttribute('readonly');this.value='' \" placeholder=\"Login email\">")
+s=s.replace("<input id=upass type=password>","<input id=upass name=\"a2_new_login_password\" type=password value=\"\" autocomplete=\"new-password\" readonly onfocus=\"this.removeAttribute('readonly');this.value=''\">")
 s=s.replace("if($('uemail')&&!$('uemail').value)$('uemail').value=m.email||'';","")
 
 # Explain the Auth/profile distinction in the admin UI.
@@ -23,7 +24,7 @@ s=s.replace(old,new,1)
 s=s.replace("Remove this user profile? The Firebase Auth login will remain, but app access will stop.","Remove only this app profile? IMPORTANT: the Firebase Authentication login will NOT be deleted and this email may still sign in to Firebase. Use Disable if you only want to block app access.")
 s=s.replace("User profile removed; member record kept","App profile removed only; Firebase Auth login still exists")
 
-required=['autocomplete=\"off\" placeholder=\"Login email\"','Member contact details and Firebase login credentials are separate','auth/email-already-in-use','App profile removed only; Firebase Auth login still exists']
+required=['name=\"a2_new_login_email\"','name=\"a2_new_login_password\"','autocomplete=\"new-password\"','Member contact details and Firebase login credentials are separate','auth/email-already-in-use','App profile removed only; Firebase Auth login still exists']
 missing=[x for x in required if x not in s]
 if missing: raise SystemExit('Missing user consistency markers: '+', '.join(missing))
 app.write_text(s)
