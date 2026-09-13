@@ -29,7 +29,7 @@ jobs:
           test -n "$FIREBASE_SERVICE_ACCOUNT"
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-service-account.json"
       - name: Install function dependencies
-        run: npm --prefix functions ci
+        run: npm --prefix functions install --omit=dev
       - name: Deploy Functions, Firestore rules and indexes
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
