@@ -83,6 +83,8 @@ jobs:
           print('A2 MESS HUB production features + user auth consistency present')
           PY
           node --check /tmp/a2-app-check.mjs
+      - name: Verify Admin, Chef and Member security matrix
+        run: python scripts/production-security-check.py
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
