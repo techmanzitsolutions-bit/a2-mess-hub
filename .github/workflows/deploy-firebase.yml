@@ -8,6 +8,7 @@ on:
       - 'firebase.json'
       - 'firestore.rules'
       - 'firestore.indexes.json'
+      - 'functions/**'
       - '.github/workflows/deploy-firebase.yml'
 
 jobs:
@@ -27,10 +28,12 @@ jobs:
         run: |
           test -n "$FIREBASE_SERVICE_ACCOUNT"
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-service-account.json"
-      - name: Deploy Firestore rules and indexes
+      - name: Install function dependencies
+        run: npm --prefix functions ci
+      - name: Deploy Functions, Firestore rules and indexes
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
         run: |
           test -n "$FIREBASE_PROJECT_ID"
-          firebase deploy --project "$FIREBASE_PROJECT_ID" --only firestore:rules,firestore:indexes --non-interactive
+          firebase deploy --project "$FIREBASE_PROJECT_ID" --only functions,firestore:rules,firestore:indexes --non-interactive
