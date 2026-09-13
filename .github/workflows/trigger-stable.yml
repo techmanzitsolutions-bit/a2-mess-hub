@@ -65,6 +65,8 @@ jobs:
         run: python scripts/v5-member-quick-action-fix.py
       - name: Reconcile linked users in Admin user list
         run: python scripts/user-list-reconcile-patch.py
+      - name: Apply Spark-safe user access controls
+        run: python scripts/spark-safe-user-access-patch.py
       - name: Validate app JavaScript and production features
         run: |
           python - <<'PY'
