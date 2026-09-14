@@ -75,6 +75,8 @@ jobs:
         run: python scripts/report-calculation-clarity-patch.py
       - name: Apply premium live-data dashboard
         run: python scripts/dashboard-v6-patch.py
+      - name: Apply TM Solutions powered-by branding
+        run: python scripts/tm-solutions-branding-patch.py
       - name: Validate app JavaScript and production features
         run: |
           python - <<'PY'
@@ -85,11 +87,12 @@ jobs:
           start=a+len(marker); b=s.find('</script>',start)
           if b < 0: raise SystemExit('Module script end not found')
           Path('/tmp/a2-app-check.mjs').write_text(s[start:b])
-          required=['function currentBillingMonth()','billingMonth','Total Receivable','PARTIAL','function globalPaymentSummary(','function linkedMemberForUser(u)','Reset Password','api.cloudinary.com/v1_1/rtsrjhpm/image/upload','function gasOrder(){','function backupPage(){','function monthClosePage(){','monthlyClosings','function mealSkipPage(){','mealSkips','Kitchen Meal Count','NO NEED / SKIP','MEAL SKIP QUICK ACTION','Cloud verification failed','skip saved to cloud ✅',"const mealPrepCutoff='17:00'",'Dinner and the next day’s Lunch are prepared together','Prepared previous evening','function expenseDateKey(x)','Search expense, category or amount','All Categories','Newest First','Amount: High → Low','No expenses match your search/filter.','id="a2-pro-ui"','id="a2-premium-settings"','id="a2-v5-ui"','function morePage(){','v5-more-grid','Simple • Smart • Organized',"mobile=['dashboard','meals','expenses','reports','more']",'a2-shell-logo','page-${state.page}','function userRows()','Sync User List','window.repairLinkedUsers=async','Linked account detected','name="a2_new_login_email"','name="a2_new_login_password"','autocomplete="new-password"','auth/email-already-in-use','App profile removed only; Firebase Auth login still exists','Pending to Collect','Current Cash Balance','Expected Month Balance','Collection Progress',"const raw=(x?.amount!==undefined", "timestampMonth(p?.updatedAt)||'')"]
+          required=['function currentBillingMonth()','billingMonth','Total Receivable','PARTIAL','function globalPaymentSummary(','function linkedMemberForUser(u)','Reset Password','api.cloudinary.com/v1_1/rtsrjhpm/image/upload','function gasOrder(){','function backupPage(){','function monthClosePage(){','monthlyClosings','function mealSkipPage(){','mealSkips','Kitchen Meal Count','NO NEED / SKIP','MEAL SKIP QUICK ACTION','Cloud verification failed','skip saved to cloud ✅',"const mealPrepCutoff='17:00'",'Dinner and the next day’s Lunch are prepared together','Prepared previous evening','function expenseDateKey(x)','Search expense, category or amount','All Categories','Newest First','Amount: High → Low','No expenses match your search/filter.','id="a2-pro-ui"','id="a2-premium-settings"','id="a2-v5-ui"','function morePage(){','v5-more-grid','Simple • Smart • Organized',"mobile=['dashboard','meals','expenses','reports','more']",'a2-shell-logo','page-${state.page}','function userRows()','Sync User List','window.repairLinkedUsers=async','Linked account detected','name="a2_new_login_email"','name="a2_new_login_password"','autocomplete="new-password"','auth/email-already-in-use','App profile removed only; Firebase Auth login still exists','Pending to Collect','Current Cash Balance','Expected Month Balance','Collection Progress',"const raw=(x?.amount!==undefined", "timestampMonth(p?.updatedAt)||'')",'tm-solutions-logo.webp','Powered by','TM Solutions']
           missing=[x for x in required if x not in s]
           if missing: raise SystemExit('Missing production features: '+', '.join(missing))
           if 'How this report is calculated' in s: raise SystemExit('Formula explanation unexpectedly present')
-          print('A2 MESS HUB production features + clean report UI + normalized monthly payments present')
+          if not Path('/tmp/a2-pwa/www/tm-solutions-logo.webp').exists(): raise SystemExit('TM Solutions logo asset missing')
+          print('A2 MESS HUB production features + TM Solutions powered-by branding present')
           PY
           node --check /tmp/a2-app-check.mjs
       - name: Configure Pages
@@ -101,4 +104,4 @@ jobs:
       - name: Deploy A2 MESS HUB PWA
         id: deployment
         uses: actions/deploy-pages@v4
-# deployment trigger: clean report UI without formula explanation
+# deployment trigger: TM Solutions powered-by branding
