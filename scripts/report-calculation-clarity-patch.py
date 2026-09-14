@@ -25,7 +25,6 @@ REPORTS=r'''function reports(){
     ${metric('Current Cash Balance','AED '+money(cash))}
     ${metric('Expected Month Balance','AED '+money(expected))}
   </div>
-  <div class=note style="margin-top:12px;line-height:1.7"><b>How this report is calculated</b><br>Total Receivable = all member monthly plans<br>Collected = payments received for ${month}<br>Pending to Collect = Total Receivable − Collected<br>Current Cash Balance = Collected − Expenses<br>Expected Month Balance = Total Receivable − Expenses</div>
   <div class=card style="margin-top:12px"><div class=top><div><h3 style="margin:0">Collection Progress</h3><div class=small>AED ${money(paid)} collected of AED ${money(total)}</div></div><b>${pct.toFixed(1)}%</b></div><div class=ref-progress><i style="width:${pct}%"></i></div></div>
   <div class=ref-actions><button class="card ref-action" onclick="exportMemberReport()"><b>👥 Member Report</b><small class=muted>Payment status and dues</small></button><button class="card ref-action" onclick="exportExpenseReport()"><b>🧾 Expense Report</b><small class=muted>Detailed expense breakdown</small></button><button class="card ref-action" onclick="exportFullReport()"><b>📥 Export Report</b><small class=muted>Complete CSV download</small></button></div>`
 }'''
@@ -39,9 +38,11 @@ for app in paths:
     if a<0 or b<0:
         raise SystemExit('Reports function markers missing')
     s=s[:a]+REPORTS+s[b:]
-    required=['Total Receivable','Pending to Collect','Current Cash Balance','Expected Month Balance','How this report is calculated','pct.toFixed(1)']
+    required=['Total Receivable','Pending to Collect','Current Cash Balance','Expected Month Balance','Collection Progress','pct.toFixed(1)']
     missing=[x for x in required if x not in s]
     if missing:
-        raise SystemExit('Report clarity patch missing: '+', '.join(missing))
+        raise SystemExit('Report UI patch missing: '+', '.join(missing))
+    if 'How this report is calculated' in s:
+        raise SystemExit('Formula explanation must not be visible in report UI')
     app.write_text(s)
-    print('Applied clear monthly report calculations to',app)
+    print('Applied clean monthly report UI to',app)
