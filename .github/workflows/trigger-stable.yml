@@ -89,15 +89,15 @@ jobs:
           start=a+len(marker); b=s.find('</script>',start)
           if b < 0: raise SystemExit('Module script end not found')
           Path('/tmp/a2-app-check.mjs').write_text(s[start:b])
-          required=['function currentBillingMonth()','billingMonth','Total Receivable','PARTIAL','function globalPaymentSummary(','function linkedMemberForUser(u)','Reset Password','api.cloudinary.com/v1_1/rtsrjhpm/image/upload','function gasOrder(){','function backupPage(){','function monthClosePage(){','monthlyClosings','function mealSkipPage(){','mealSkips','Kitchen Meal Count','NO NEED / SKIP','MEAL SKIP QUICK ACTION','Cloud verification failed','skip saved to cloud ✅',"const mealPrepCutoff='17:00'",'Dinner and the next day’s Lunch are prepared together','Prepared previous evening','function expenseDateKey(x)','Search expense, category or amount','All Categories','Newest First','Amount: High → Low','No expenses match your search/filter.','id="a2-pro-ui"','id="a2-premium-settings"','id="a2-v5-ui"','function morePage(){','v5-more-grid','Simple • Smart • Organized',"mobile=['dashboard','meals','expenses','reports','more']",'a2-shell-logo','page-${state.page}','function userRows()','Sync User List','window.repairLinkedUsers=async','Linked account detected','name="a2_new_login_email"','name="a2_new_login_password"','autocomplete="new-password"','auth/email-already-in-use','App profile removed only; Firebase Auth login still exists','Pending to Collect','Current Cash Balance','Expected Month Balance','Collection Progress',"const raw=(x?.amount!==undefined", "timestampMonth(p?.updatedAt)||'')",'tm-solutions-logo.webp?v=3','Powered by','TM Solutions']
+          required=['function currentBillingMonth()','billingMonth','Total Receivable','PARTIAL','function globalPaymentSummary(','function linkedMemberForUser(u)','Reset Password','api.cloudinary.com/v1_1/rtsrjhpm/image/upload','function gasOrder(){','function backupPage(){','function monthClosePage(){','monthlyClosings','function mealSkipPage(){','mealSkips','Kitchen Meal Count','NO NEED / SKIP','MEAL SKIP QUICK ACTION','Cloud verification failed','skip saved to cloud ✅',"const mealPrepCutoff='17:00'",'Dinner and the next day’s Lunch are prepared together','Prepared previous evening','function expenseDateKey(x)','Search expense, category or amount','All Categories','Newest First','Amount: High → Low','No expenses match your search/filter.','id="a2-pro-ui"','id="a2-premium-settings"','id="a2-v5-ui"','function morePage(){','v5-more-grid','Simple • Smart • Organized',"mobile=['dashboard','meals','expenses','reports','more']",'a2-shell-logo','page-${state.page}','function userRows()','Sync User List','window.repairLinkedUsers=async','Linked account detected','name="a2_new_login_email"','name="a2_new_login_password"','autocomplete="new-password"','auth/email-already-in-use','App profile removed only; Firebase Auth login still exists','Pending to Collect','Current Cash Balance','Expected Month Balance','Collection Progress',"const raw=(x?.amount!==undefined", "timestampMonth(p?.updatedAt)||'')",'tm-logo-svg','Powered by','SOLUTIONS']
           missing=[x for x in required if x not in s]
           if missing: raise SystemExit('Missing production features: '+', '.join(missing))
           if 'How this report is calculated' in s: raise SystemExit('Formula explanation unexpectedly present')
-          if not (root/'tm-solutions-logo.webp').exists(): raise SystemExit('Approved TM Solutions logo asset missing')
-          if (root/'techmanz-logo.jpg').exists() or (root/'tm-solutions-logo.png').exists(): raise SystemExit('Legacy/broken branding asset still present')
+          legacy=list(root.glob('techmanz-logo.*'))+list(root.glob('tm-solutions-logo.*'))
+          if legacy: raise SystemExit('Legacy/broken branding assets still present: '+', '.join(p.name for p in legacy))
           scan='\n'.join(p.read_text(errors='ignore') for p in [root/'app.html',root/'index.html',root/'mobile-fixes.css',root/'manifest.webmanifest'])
-          if re.search(r'TECH\s*MANZ|techmanz-logo',scan,re.I): raise SystemExit('Legacy TECH MANZ branding still present')
-          print('A2 MESS HUB production features + approved TM Solutions branding verified')
+          if re.search(r'TECH\s*MANZ|techmanz-logo|tm-solutions-logo\.(?:png|webp)',scan,re.I): raise SystemExit('Legacy/broken branding reference still present')
+          print('A2 MESS HUB production features + inline TM Solutions branding verified')
           PY
           node --check /tmp/a2-app-check.mjs
       - name: Configure Pages
@@ -109,4 +109,4 @@ jobs:
       - name: Deploy A2 MESS HUB PWA
         id: deployment
         uses: actions/deploy-pages@v4
-# deployment trigger: approved TM Solutions branding only
+# deployment trigger: inline TM Solutions branding, no broken image dependency
