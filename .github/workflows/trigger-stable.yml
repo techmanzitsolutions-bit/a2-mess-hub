@@ -99,8 +99,21 @@ jobs:
           if not approved.exists() or approved.stat().st_size < 4000: raise SystemExit('Approved TM Solutions logo asset missing/invalid')
           legacy=list(root.glob('techmanz-logo.*'))+list(root.glob('tm-solutions-logo.*'))+list(root.glob('tm-solutions-approved.svg'))
           if legacy: raise SystemExit('Non-approved branding assets still present: '+', '.join(p.name for p in legacy))
-          scan='\n'.join(p.read_text(errors='ignore') for p in [root/'app.html',root/'index.html',root/'mobile-fixes.css',root/'manifest.webmanifest'])
-          if re.search(r'TECH\s*MANZ|techmanz-logo|tm-solutions-logo\.(?:png|webp)|tm-logo-svg',scan,re.I): raise SystemExit('Old or re-created TM branding still present')
+
+          # Check only rendered/static markup for legacy branding. Runtime cleanup code
+          # intentionally contains legacy strings, so script bodies are excluded here.
+          visible_parts=[]
+          for p in [root/'app.html',root/'index.html']:
+              text=p.read_text(errors='ignore')
+              text=re.sub(r'<script\b[^>]*>.*?</script>', '', text, flags=re.I|re.S)
+              visible_parts.append(text)
+          visible_parts.append((root/'mobile-fixes.css').read_text(errors='ignore'))
+          visible_parts.append((root/'manifest.webmanifest').read_text(errors='ignore'))
+          visible_scan='\n'.join(visible_parts)
+          if re.search(r'TECH\s*MANZ|techmanz-logo|tm-solutions-logo\.(?:png|webp)|tm-logo-svg',visible_scan,re.I):
+              raise SystemExit('Old or re-created TM branding still visible in live markup')
+          if visible_scan.count('tm-solutions-approved.webp') < 2:
+              raise SystemExit('Approved TM Solutions logo is not present in all expected live locations')
           print('A2 MESS HUB production features + approved TM logo everywhere verified')
           PY
           node --check /tmp/a2-app-check.mjs
