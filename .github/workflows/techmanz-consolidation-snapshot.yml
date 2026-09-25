@@ -6,6 +6,10 @@ on:
     paths-ignore:
       - 'migration/generated-live/**'
       - 'migration/audit/**'
+      - 'migration/server/**'
+      - 'migration/frontend/**'
+      - 'migration/scripts/**'
+      - 'migration/techmanz-build/**'
 
 permissions:
   contents: write
