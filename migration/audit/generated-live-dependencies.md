@@ -9,3 +9,6 @@
 - monthly_closing: 7 occurrence(s)
 - notifications: 2 occurrence(s)
 - month_plans: 2 occurrence(s)
+- pwa_runtime: 1 occurrence(s)
+- service_worker: 0 occurrence(s)
+- local_logo: 7 occurrence(s)
