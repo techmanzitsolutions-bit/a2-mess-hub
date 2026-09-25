@@ -362,6 +362,12 @@ def create_compat_router(db, current_user, allow_roles, hash_password):
                         if old is not None:
                             _authorize_write(user, collection, "delete", doc_id, old)
                             cur.execute("DELETE FROM live_documents WHERE collection=%s AND doc_id=%s", (collection, doc_id))
+                            if collection == "users":
+                                try:
+                                    cur.execute("UPDATE users SET active=FALSE,updated_at=NOW() WHERE id=%s", (uuid.UUID(doc_id),))
+                                    cur.execute("UPDATE members SET user_id=NULL,updated_at=NOW() WHERE user_id=%s", (uuid.UUID(doc_id),))
+                                except Exception:
+                                    pass
                         results.append({"id": doc_id, "deleted": True})
                     else:
                         raise HTTPException(status_code=422, detail=f"Unsupported batch op: {op}")
