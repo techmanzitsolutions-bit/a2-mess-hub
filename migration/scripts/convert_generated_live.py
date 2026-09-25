@@ -51,6 +51,7 @@ repls={
  "imageProvider:'uploadcare'":"imageProvider:'local'",
 }
 for a,b in repls.items(): s=s.replace(a,b)
+s=s.replace("imageProvider:billUrl?(billUrl.includes('res.cloudinary.com')?'cloudinary':(old.imageProvider||'uploadcare')):''","imageProvider:billUrl?'local':''")
 app.write_text(s)
 
 sw=out/'sw.js'
