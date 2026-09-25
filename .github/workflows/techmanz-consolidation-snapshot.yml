@@ -72,12 +72,10 @@ jobs:
           node --check /tmp/a2-generated-check.mjs
       - name: Save generated baseline and dependency audit
         run: |
-          mkdir -p migration/generated-live migration/audit
-          cp /tmp/a2-pwa/www/app.html migration/generated-live/app.html
-          cp /tmp/a2-pwa/www/index.html migration/generated-live/index.html
-          cp /tmp/a2-pwa/www/manifest.webmanifest migration/generated-live/manifest.webmanifest
-          cp /tmp/a2-pwa/www/mobile-fixes.css migration/generated-live/mobile-fixes.css
-          cp /tmp/a2-pwa/www/tm-solutions-approved.webp migration/generated-live/tm-solutions-approved.webp
+          mkdir -p migration/audit
+          rm -rf migration/generated-live
+          mkdir -p migration/generated-live
+          cp -a /tmp/a2-pwa/www/. migration/generated-live/
           python - <<'PY'
           from pathlib import Path
           s=Path('migration/generated-live/app.html').read_text()
@@ -91,6 +89,9 @@ jobs:
             'monthly_closing':'monthlyClosings',
             'notifications':'a2-live-notifications',
             'month_plans':'selectMemberPlan',
+            'pwa_runtime':'pwa.js',
+            'service_worker':'sw.js',
+            'local_logo':'logo.svg',
           }
           lines=['# Generated live dependency audit','']
           for k,v in needles.items():
