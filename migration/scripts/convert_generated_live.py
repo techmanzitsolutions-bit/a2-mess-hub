@@ -46,12 +46,13 @@ repls={
  'Password reset email sent':'Password reset saved',
  'Cloud Sync':'Server Sync',
  'cloud authentication':'local authentication',
- 'this email may still sign in to Firebase':'the local login remains, but this app profile will be removed',
- 'App profile removed only; Firebase Auth login still exists':'App profile removed; local login record remains',
+ 'Remove only this app profile? IMPORTANT: the local authentication login will NOT be deleted and this email may still sign in to Firebase. Use Disable if you only want to block app access.':'Remove this user and block local login? The linked member record will be kept.',
+ 'App profile removed only; Firebase Auth login still exists':'User removed and local login disabled',
  "imageProvider:'uploadcare'":"imageProvider:'local'",
 }
 for a,b in repls.items(): s=s.replace(a,b)
 s=s.replace("imageProvider:billUrl?(billUrl.includes('res.cloudinary.com')?'cloudinary':(old.imageProvider||'uploadcare')):''","imageProvider:billUrl?'local':''")
+s=s.replace('src="${safe}-/preview/1200x1200/" alt="Bill" onerror="this.onerror=null;this.src=\'${safe}\'"','src="${safe}" alt="Bill"')
 app.write_text(s)
 
 sw=out/'sw.js'
