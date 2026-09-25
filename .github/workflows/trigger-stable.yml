@@ -83,6 +83,8 @@ jobs:
         run: python scripts/cash-card-method-patch.py
       - name: Show monthly carry forward in balances and WhatsApp
         run: python scripts/monthly-carry-forward-display-patch.py
+      - name: Add payment month navigation, ordering and carry adjustment
+        run: python scripts/payment-month-order-carry-adjustment-patch.py
       - name: Use one in-app bill viewer
         run: python scripts/bill-inline-viewer-patch.py
       - name: Add realtime in-app notifications
