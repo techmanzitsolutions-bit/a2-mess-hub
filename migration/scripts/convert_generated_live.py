@@ -33,8 +33,10 @@ s=re.sub(r"function billPreviewUrl\(x,size=300\)\{.*?\}\nfunction expenseDate", 
 
 repls={
  'Connecting to cloud...':'Connecting to TECH MANZ server...',
+ 'Connecting to cloud…':'Connecting to TECH MANZ server…',
  'Cloud synchronized mess management':'TECH MANZ server synchronized mess management',
  'Live cloud data':'Live server data',
+ 'Realtime cloud sync':'Realtime server sync',
  'cloud ✅':'server ✅',
  'Cloud verification failed':'Server verification failed',
  'Firebase login':'server login',
@@ -44,6 +46,8 @@ repls={
  'Password reset email sent':'Password reset saved',
  'Cloud Sync':'Server Sync',
  'cloud authentication':'local authentication',
+ 'this email may still sign in to Firebase':'the local login remains, but this app profile will be removed',
+ 'App profile removed only; Firebase Auth login still exists':'App profile removed; local login record remains',
  "imageProvider:'uploadcare'":"imageProvider:'local'",
 }
 for a,b in repls.items(): s=s.replace(a,b)
