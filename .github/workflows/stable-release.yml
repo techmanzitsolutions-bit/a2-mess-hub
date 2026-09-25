@@ -46,7 +46,7 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          candidates=[Path('www/app.html'),Path('android/app/src/main/assets/public/app.html')]
+          candidates=[Path('www/app.html'),Path('mobile/android/app/src/main/assets/public/app.html')]
           for p in candidates:
               if not p.exists():
                   continue
@@ -78,7 +78,7 @@ jobs:
 
       - name: Apply monthly payment consistency fix
         run: |
-          python scripts/payment-calculation-fix.py www/app.html android/app/src/main/assets/public/app.html
+          python scripts/payment-calculation-fix.py www/app.html mobile/android/app/src/main/assets/public/app.html
 
       - name: Validate app JavaScript and required features
         run: |
@@ -91,7 +91,7 @@ jobs:
             'billingMonth','Member Balances','Payment Transactions',
             'paymentFormForMember','PARTIAL'
           ]
-          for path in [Path('www/app.html'),Path('android/app/src/main/assets/public/app.html')]:
+          for path in [Path('www/app.html'),Path('mobile/android/app/src/main/assets/public/app.html')]:
               s=path.read_text()
               missing=[x for x in required if x not in s]
               if missing: raise SystemExit(f'{path}: missing '+', '.join(missing))
@@ -110,14 +110,14 @@ jobs:
           RUN=${GITHUB_RUN_NUMBER}
           VERSION_CODE=$((20000 + RUN))
           VERSION_NAME="4.${RUN}"
-          sed -i -E "s/versionCode [0-9]+/versionCode ${VERSION_CODE}/" android/app/build.gradle
-          sed -i -E "s/versionName \"[^\"]+\"/versionName \"${VERSION_NAME}\"/" android/app/build.gradle
+          sed -i -E "s/versionCode [0-9]+/versionCode ${VERSION_CODE}/" mobile/android/app/build.gradle
+          sed -i -E "s/versionName \"[^\"]+\"/versionName \"${VERSION_NAME}\"/" mobile/android/app/build.gradle
           echo "VERSION_CODE=${VERSION_CODE}" >> "$GITHUB_ENV"
           echo "VERSION_NAME=${VERSION_NAME}" >> "$GITHUB_ENV"
 
       - name: Build release APK
         run: |
-          cd android
+          cd mobile/android
           chmod +x gradlew
           ./gradlew assembleRelease
 
@@ -145,7 +145,7 @@ jobs:
           STORE_PASS="$(cat /tmp/storepass)"
           KEY_ALIAS="$(cat /tmp/keyalias)"
           BUILD_TOOLS="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
-          UNSIGNED="android/app/build/outputs/apk/release/app-release-unsigned.apk"
+          UNSIGNED="mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk"
           ZIPALIGNED="/tmp/A2-MESS-HUB-aligned.apk"
           FINAL="/tmp/A2-MESS-HUB-STABLE.apk"
           "$BUILD_TOOLS/zipalign" -f -v 4 "$UNSIGNED" "$ZIPALIGNED"
