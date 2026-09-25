@@ -289,7 +289,7 @@ def create_compat_router(db, current_user, allow_roles, hash_password):
         doc_id = str(uuid.uuid4())
         with db() as conn:
             with conn.cursor() as cur:
-                final = _put_doc(cur, collection, doc_id, payload, Falsl user)
+                final = _put_doc(cur, collection, doc_id, payload, False, user)
             conn.commit()
         return {"id": doc_id, "data": final}
 
