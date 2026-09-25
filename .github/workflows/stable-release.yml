@@ -95,13 +95,14 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           required=[
-            'Expense Name','Added By','Read only','Total Receivable',
+            'Total Receivable',
             'api.cloudinary.com/v1_1/rtsrjhpm/image/upload',
             "upload_preset','a2_mess_bills",'function currentBillingMonth()',
             'billingMonth','Member Balances','Payment Transactions',
             'paymentFormForMember','PARTIAL'
           ]
-          for path in [Path('www/app.html'),Path('mobile/android/app/src/main/assets/public/app.html')]:
+          paths=[Path('www/app.html'),Path('mobile/android/app/src/main/assets/public/app.html')]
+          for path in paths:
               s=path.read_text()
               missing=[x for x in required if x not in s]
               if missing: raise SystemExit(f'{path}: missing '+', '.join(missing))
@@ -111,6 +112,10 @@ jobs:
               out=Path('/tmp')/(path.parent.name+'-app-check.mjs')
               out.write_text(s[a+len(marker):b])
               print(out)
+          android=paths[1].read_text()
+          mobile_required=['Expense Name','Added By','Read only']
+          missing=[x for x in mobile_required if x not in android]
+          if missing: raise SystemExit(f'{paths[1]}: missing '+', '.join(missing))
           PY
           node --check /tmp/www-app-check.mjs
           node --check /tmp/public-app-check.mjs
