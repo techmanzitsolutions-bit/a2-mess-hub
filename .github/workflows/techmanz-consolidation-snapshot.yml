@@ -9,7 +9,7 @@ on:
       - 'migration/server/**'
       - 'migration/frontend/**'
       - 'migration/scripts/**'
-      - 'migration/techmanz-build/**'
+      - 'migration/techmanz-build/**'\n      - '.github/workflows/techmanz-migration-build.yml'
 
 permissions:
   contents: write
