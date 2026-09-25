@@ -40,7 +40,17 @@ jobs:
           body='\n'.join(x[10:] if x.startswith('          ') else x for x in lines[py_start+1:py_end])+'\n'
           Path('/tmp/feature-patch.py').write_text(body)
           PY
+          mkdir mobile
+          cd mobile
+          npm init -y
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap init "A2 Mess Hub" "$APP_ID" --web-dir=www
+          mkdir -p www
+          cp -r ../www/. ./www/
           python /tmp/feature-patch.py
+          npx cap add android
+          cp ../firebase/google-services.json android/app/google-services.json
+          npx cap sync android
 
       - name: Switch bill photo uploads to Cloudinary
         run: |
