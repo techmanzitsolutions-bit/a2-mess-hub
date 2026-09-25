@@ -1,0 +1,107 @@
+name: TECH MANZ Consolidation Snapshot
+
+on:
+  push:
+    branches: [ techmanz-server-consolidation ]
+    paths-ignore:
+      - 'migration/generated-live/**'
+      - 'migration/audit/**'
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prepare exact production PWA
+        run: python scripts/prepare-pwa.py "$GITHUB_SHA"
+      - name: Apply production patch chain
+        run: |
+          python scripts/payment-calculation-fix.py
+          python scripts/global-receivables-patch.py
+          python scripts/payment-ledger-normalization-patch.py
+          python scripts/user-member-link-patch.py
+          python scripts/user-auth-consistency-fix.py
+          python scripts/gas-order-patch.py
+          python scripts/monthly-backup-patch.py
+          python scripts/monthly-closing-patch.py
+          python scripts/meal-skip-patch.py
+          python scripts/member-skip-visibility-fix.py
+          python scripts/meal-skip-notification-patch.py
+          python scripts/meal-skip-realtime-fix.py
+          python scripts/meal-skip-cloud-write-fix.py
+          python scripts/meal-skip-day-cutoff-patch.py
+          python scripts/expense-search-sort-filter-patch.py
+          python scripts/pro-ui-refresh-patch.py
+          python scripts/premium-settings-ui-patch.py
+          python scripts/v5-full-ui-patch.py
+          python scripts/v5-member-quick-action-fix.py
+          python scripts/user-list-reconcile-patch.py
+          python scripts/spark-safe-user-access-patch.py
+          python scripts/reference-ui-actions-patch.py
+          python scripts/report-calculation-clarity-patch.py
+          python scripts/join-date-proration-patch.py
+          python scripts/member-plan-tablet-fix.py
+          python scripts/pending-whatsapp-reminder-patch.py
+          python scripts/dashboard-v6-patch.py
+          python scripts/cash-card-method-patch.py
+          python scripts/monthly-carry-forward-display-patch.py
+          python scripts/payment-month-order-carry-adjustment-patch.py
+          python scripts/month-specific-plan-flow-patch.py
+          python scripts/bill-inline-viewer-patch.py
+          python scripts/live-notifications-patch.py
+          python scripts/tm-solutions-branding-patch.py
+          python scripts/tm-branding-runtime-guard.py
+      - name: Validate generated app
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('/tmp/a2-pwa/www/app.html').read_text()
+          required=['Total Receivable','PARTIAL','monthlyClosings','mealSkips','Kitchen Meal Count','plan-choice','selectMemberPlan','[100,200,250].includes(planAmount)','ACCOUNT_TRANSFER','a2-live-notifications','tm-solutions-approved.webp']
+          missing=[x for x in required if x not in s]
+          if missing: raise SystemExit('Missing: '+', '.join(missing))
+          marker='<script type="module">'; a=s.find(marker); b=s.find('</script>',a+len(marker))
+          if a<0 or b<0: raise SystemExit('module script missing')
+          Path('/tmp/a2-generated-check.mjs').write_text(s[a+len(marker):b])
+          print('Generated live feature snapshot validated')
+          PY
+          node --check /tmp/a2-generated-check.mjs
+      - name: Save generated baseline and dependency audit
+        run: |
+          mkdir -p migration/generated-live migration/audit
+          cp /tmp/a2-pwa/www/app.html migration/generated-live/app.html
+          cp /tmp/a2-pwa/www/index.html migration/generated-live/index.html
+          cp /tmp/a2-pwa/www/manifest.webmanifest migration/generated-live/manifest.webmanifest
+          cp /tmp/a2-pwa/www/mobile-fixes.css migration/generated-live/mobile-fixes.css
+          cp /tmp/a2-pwa/www/tm-solutions-approved.webp migration/generated-live/tm-solutions-approved.webp
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('migration/generated-live/app.html').read_text()
+          needles={
+            'firebase_auth':'getAuth(',
+            'firestore':'getFirestore(',
+            'firebase_import':'firebasejs',
+            'cloudinary':'api.cloudinary.com',
+            'uploadcare':'uploadcare',
+            'meal_skips':'mealSkips',
+            'monthly_closing':'monthlyClosings',
+            'notifications':'a2-live-notifications',
+            'month_plans':'selectMemberPlan',
+          }
+          lines=['# Generated live dependency audit','']
+          for k,v in needles.items():
+              lines.append(f'- {k}: {s.count(v)} occurrence(s)')
+          Path('migration/audit/generated-live-dependencies.md').write_text('\n'.join(lines)+'\n')
+          PY
+      - name: Commit generated baseline
+        run: |
+          git config user.name "TECH MANZ Migration Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add migration/generated-live migration/audit
+          git diff --cached --quiet && exit 0
+          git commit -m "Capture generated live A2 MESS baseline"
+          git push origin HEAD:techmanz-server-consolidation
