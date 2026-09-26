@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A2 MESS HUB Production Import</title>
+<style>
+:root{color-scheme:dark}body{margin:0;background:#03130e;color:#eafff6;font-family:Arial,sans-serif}.wrap{max-width:900px;margin:32px auto;padding:18px}.card{background:#08251a;border:1px solid #1d6b4c;border-radius:18px;padding:24px;box-shadow:0 18px 60px #0008}h1{margin:0 0 8px;color:#4df0a8}.warn{background:#2b2107;border:1px solid #8c6a12;padding:12px;border-radius:10px;color:#ffe8a0}.good{color:#68f5b5}.bad{color:#ff8e8e}label{display:block;margin:14px 0 6px;font-size:12px;font-weight:800;color:#9bd8c0}input{width:100%;box-sizing:border-box;background:#031710;border:1px solid #205c46;border-radius:10px;padding:13px;color:#fff}button{margin-top:18px;background:#19d98c;color:#02150d;border:0;border-radius:10px;padding:13px 18px;font-weight:900;cursor:pointer}button:disabled{opacity:.5;cursor:wait}pre{white-space:pre-wrap;background:#02100b;border:1px solid #174b38;border-radius:10px;padding:14px;min-height:180px;max-height:420px;overflow:auto}.small{font-size:12px;color:#91b9a8;line-height:1.5}
+</style>
+</head>
+<body><div class="wrap"><div class="card">
+<h1>A2 MESS HUB — Production → TECH MANZ Import</h1>
+<p class="warn">This imports the already-exported production data into the private TECH MANZ staging server. It does not write to Firebase. A browser backup of the current staging document store is downloaded first.</p>
+<label>Production export JSON</label>
+<input id="file" type="file" accept="application/json,.json">
+<label>TECH MANZ Admin Email</label>
+<input id="email" type="email" value="a.hakkim7468@gmail.com" autocomplete="username">
+<label>TECH MANZ Admin Password</label>
+<input id="password" type="password" autocomplete="current-password">
+<button id="run">IMPORT PRODUCTION DATA</button>
+<p class="small">Existing TECH MANZ Admin credentials are preserved. Production accounts that do not yet exist locally receive temporary TECH MANZ passwords; a credentials JSON is downloaded automatically. Current Firebase passwords are not contained in the production export.</p>
+<pre id="log">Ready.</pre>
+</div></div>
+<script>
+const API='/api';
+const EXPECTED={
+ format:'A2-MESS-HUB-PRODUCTION-EXPORT',
+ projectId:'a2-mess-hub',
+ exportedAt:'2026-09-26T07:21:14.195Z',
+ counts:{users:12,members:11,inventory:0,meals:2,mealSkips:5,expenses:58,payments:29,monthlyClosings:1,settings:0,notifications:0,system:1},
+ paymentTotal:2890.13,
+ expenseTotal:1570.18
+};
+const names=['users','members','inventory','meals','mealSkips','expenses','payments','monthlyClosings','settings','notifications','system'];
+const log=document.getElementById('log'),btn=document.getElementById('run');
+let token='';
+
+function say(x,cls=''){log.textContent+='\n'+x;log.scrollTop=log.scrollHeight}
+function money(n){return Math.round((Number(n)||0)*100)/100}
+function download(name,obj){const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000)}
+function randPassword(){const a='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$';let s='Tm!';const b=new Uint32Array(13);crypto.getRandomValues(b);for(const n of b)s+=a[n%a.length];return s}
+function revive(v){
+ if(v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).length===1&&v.__a2Timestamp)return v.__a2Timestamp;
+ if(Array.isArray(v))return v.map(revive);
+ if(v&&typeof v==='object'){const o={};for(const[k,x]of Object.entries(v))o[k]=revive(x);return o}
+ return v
+}
+function mapIds(v,map){
+ if(typeof v==='string'&&map[v])return map[v];
+ if(Array.isArray(v))return v.map(x=>mapIds(x,map));
+ if(v&&typeof v==='object'){const o={};for(const[k,x]of Object.entries(v))o[k]=mapIds(x,map);return o}
+ return v
+}
+async function api(path,opt={}){
+ const h=new Headers(opt.headers||{});if(token)h.set('Authorization','Bearer '+token);
+ if(opt.body&&!(opt.body instanceof FormData)&&!h.has('Content-Type'))h.set('Content-Type','application/json');
+ const r=await fetch(API+path,{...opt,headers:h});let body=null;const ct=r.headers.get('content-type')||'';
+ try{body=ct.includes('json')?await r.json():await r.text()}catch{}
+ if(!r.ok)throw new Error((body&&body.detail)||body||('HTTP '+r.status));
+ return body
+}
+async function list(c){const r=await api('/compat/docs/'+encodeURIComponent(c));return r.docs||[]}
+async function put(c,id,data){return api('/compat/docs/'+encodeURIComponent(c)+'/'+encodeURIComponent(id),{method:'PUT',body:JSON.stringify(data)})}
+async function del(c,id){return api('/compat/docs/'+encodeURIComponent(c)+'/'+encodeURIComponent(id),{method:'DELETE'})}
+function validatePack(pack){
+ if(pack?.format!==EXPECTED.format||pack?.projectId!==EXPECTED.projectId)throw new Error('Wrong export format/project');
+ if(pack.exportedAt!==EXPECTED.exportedAt)throw new Error('This is not the reviewed production export. Expected '+EXPECTED.exportedAt);
+ for(const [k,n] of Object.entries(EXPECTED.counts)){const got=Array.isArray(pack.collections?.[k])?pack.collections[k].length:-1;if(got!==n)throw new Error(k+' count changed: expected '+n+', got '+got)}
+ const pt=money((pack.collections.payments||[]).reduce((a,x)=>a+Number(x.data?.amount??x.data?.paidAmount??0),0));
+ const et=money((pack.collections.expenses||[]).reduce((a,x)=>a+Number(x.data?.amount||0),0));
+ if(pt!==EXPECTED.paymentTotal||et!==EXPECTED.expenseTotal)throw new Error('Financial totals do not match reviewed export');
+ return {pt,et}
+}
+async function localizeBills(expenses){
+ let ok=0,failed=[];
+ for(let i=0;i<expenses.length;i++){
+  const item=expenses[i],d=item.data||{},url=String(d.billUrl||'');
+  if(!/^https:\/\/res\.cloudinary\.com\//i.test(url))continue;
+  say('Bill '+(i+1)+'/'+expenses.length+' · '+item.id);
+  try{
+   const r=await fetch(url,{mode:'cors'});if(!r.ok)throw new Error('source HTTP '+r.status);
+   const blob=await r.blob(),fd=new FormData();fd.append('bill',blob,'bill.jpg');
+   const up=await api('/compat/files/bills',{method:'POST',body:fd});
+   await api('/compat/docs/expenses/'+encodeURIComponent(item.id),{method:'PATCH',body:JSON.stringify({legacyBillUrl:url,billUrl:up.billUrl,billFileId:up.billFileId,imageProvider:'local'})});
+   ok++;
+  }catch(e){failed.push({id:item.id,url,error:String(e?.message||e)});say('  Bill migration failed: '+(e?.message||e))}
+ }
+ return {ok,failed}
+}
+async function backupCurrent(){
+ const pack={format:'A2-TECHMANZ-PRE-PRODUCTION-IMPORT',createdAt:new Date().toISOString(),collections:{}};
+ for(const c of names){try{pack.collections[c]=await list(c)}catch(e){pack.collections[c]=[]}}
+ download('A2-TECHMANZ-PRE-PRODUCTION-IMPORT-'+Date.now()+'.json',pack);
+ return pack
+}
+async function verify(pack,uidMap){
+ for(const c of names){
+  const got=(await list(c)).length,want=EXPECTED.counts[c];
+  if(got!==want)throw new Error('Post-import '+c+' count mismatch: '+got+' vs '+want);
+ }
+ const pays=(await list('payments')).map(x=>x.data||{}),exps=(await list('expenses')).map(x=>x.data||{});
+ const pt=money(pays.reduce((a,x)=>a+Number(x.amount??x.paidAmount??0),0)),et=money(exps.reduce((a,x)=>a+Number(x.amount||0),0));
+ if(pt!==EXPECTED.paymentTotal||et!==EXPECTED.expenseTotal)throw new Error('Post-import financial totals mismatch');
+ const external=exps.filter(x=>/^https:\/\/res\.cloudinary\.com\//i.test(String(x.billUrl||''))).length;
+ return {pt,et,external}
+}
+
+btn.onclick=async()=>{
+ btn.disabled=true;log.textContent='Starting production import...';
+ try{
+  const file=document.getElementById('file').files[0];if(!file)throw new Error('Select the production export JSON');
+  const pack=JSON.parse(await file.text());const totals=validatePack(pack);
+  say('Export validated: '+EXPECTED.exportedAt);
+  say('Payments AED '+totals.pt+' · Expenses AED '+totals.et);
+
+  const email=document.getElementById('email').value.trim().toLowerCase(),password=document.getElementById('password').value;
+  const login=await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});
+  token=login.access_token;document.getElementById('password').value='';
+  if(login.user?.role!=='admin')throw new Error('TECH MANZ Admin account required');
+  say('TECH MANZ Admin authenticated.');
+
+  say('Downloading pre-import staging backup...');
+  await backupCurrent();
+  say('Pre-import backup downloaded.');
+
+  const existingUsers=await list('users'),byEmail=new Map();
+  for(const d of existingUsers){const e=String(d.data?.email||'').trim().toLowerCase();if(e)byEmail.set(e,d)}
+  const uidMap={},credentials=[],prodLocalIds=new Set();
+
+  say('Reconciling '+pack.collections.users.length+' production accounts...');
+  for(const item of pack.collections.users){
+   const d=revive(item.data||{}),e=String(d.email||'').trim().toLowerCase();
+   if(!e)throw new Error('Production user '+item.id+' has no email');
+   let local=byEmail.get(e),localId;
+   if(local){localId=String(local.id);say('Reuse local login: '+e)}
+   else{
+    const temp=randPassword();
+    const created=await api('/compat/auth/create',{method:'POST',body:JSON.stringify({email:e,password:temp,name:d.name||e.split('@')[0]})});
+    localId=String(created.uid);credentials.push({name:d.name||'',email:e,role:d.role||'member',temporaryPassword:temp});
+    say('Created local login: '+e);
+   }
+   uidMap[item.id]=localId;prodLocalIds.add(localId);
+  }
+
+  for(const old of existingUsers){
+   if(!prodLocalIds.has(String(old.id))){say('Disable staging-only account: '+(old.data?.email||old.id));await del('users',old.id)}
+  }
+
+  say('Replacing staging document data with production snapshot...');
+  for(const c of names){
+   if(c==='users')continue;
+   for(const old of await list(c))await del(c,old.id);
+  }
+
+  for(const item of pack.collections.users){
+   const localId=uidMap[item.id],d=mapIds(revive(item.data||{}),uidMap);
+   d.uid=localId;await put('users',localId,d);
+  }
+  for(const c of names){
+   if(c==='users')continue;
+   for(const item of pack.collections[c]||[])await put(c,item.id,mapIds(revive(item.data||{}),uidMap));
+   say(c+': '+(pack.collections[c]||[]).length+' imported');
+  }
+
+  say('Testing newly-created local logins...');
+  let authPassed=0;
+  for(const c of credentials){
+   try{
+    const r=await fetch(API+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:c.email,password:c.temporaryPassword})});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const b=await r.json();if(String(b.user?.role||'')!==String(c.role||''))throw new Error('role mismatch');
+    authPassed++;
+   }catch(e){throw new Error('Login validation failed for '+c.email+': '+(e?.message||e))}
+  }
+  say('New local login validation passed: '+authPassed);
+
+  const migratedExpenses=(await list('expenses')).map(x=>({id:x.id,data:x.data||{}}));
+  const cloudCount=migratedExpenses.filter(x=>/^https:\/\/res\.cloudinary\.com\//i.test(String(x.data.billUrl||''))).length;
+  say('Cloudinary bill images to localize: '+cloudCount);
+  const bills=await localizeBills(migratedExpenses);
+  say('Bills localized: '+bills.ok+' · failed: '+bills.failed.length);
+
+  const result=await verify(pack,uidMap);
+  say('Post-import counts and financial totals passed.');
+  say('Remaining external bill URLs: '+result.external);
+
+  const report={
+   format:'A2-TECHMANZ-PRODUCTION-IMPORT-REPORT',createdAt:new Date().toISOString(),
+   sourceExportedAt:pack.exportedAt,counts:EXPECTED.counts,paymentTotal:result.pt,expenseTotal:result.et,
+   uidMappings:Object.keys(uidMap).length,newLocalCredentials:credentials.length,
+   billsLocalized:bills.ok,billFailures:bills.failed,remainingExternalBills:result.external
+  };
+  download('A2-TECHMANZ-IMPORT-REPORT-'+Date.now()+'.json',report);
+  if(credentials.length)download('A2-TECHMANZ-NEW-USER-CREDENTIALS-'+Date.now()+'.json',{createdAt:new Date().toISOString(),accounts:credentials});
+
+  if(result.external===0){
+    say('PRODUCTION DATA IMPORT PASSED.');
+    say('All external bill images are now on TECH MANZ local storage.');
+  }else{
+    say('DATA IMPORT PASSED, BUT CUTOVER BLOCKED: '+result.external+' bill images still use Cloudinary.');
+    say('Keep the downloaded import report so failed bills can be migrated separately.');
+  }
+  say('Firebase production was not modified.');
+ }catch(e){console.error(e);say('FAILED: '+(e?.message||e))}
+ finally{btn.disabled=false}
+};
+</script>
+</body></html>

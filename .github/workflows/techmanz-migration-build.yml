@@ -1,0 +1,86 @@
+name: TECH MANZ Migration Build
+
+on:
+  push:
+    branches: [ techmanz-server-consolidation ]
+    paths:
+      - 'migration/server/**'
+      - 'migration/scripts/**'
+      - 'migration/generated-live/**'
+      - '.github/workflows/techmanz-migration-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate Python migration modules
+        run: |
+          python -m py_compile migration/server/api/live_compat.py
+          python -m py_compile migration/server/api/live_compat_ext.py
+          python -m py_compile migration/scripts/build-techmanz-frontend.py
+
+      - name: Build server frontend from exact generated live baseline
+        run: python migration/scripts/build-techmanz-frontend.py
+
+      - name: Validate generated module JavaScript
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('migration/techmanz-build/app.html').read_text()
+          marker='<script type="module">'
+          a=s.find(marker); b=s.find('</script>',a+len(marker))
+          if a<0 or b<0: raise SystemExit('module script missing')
+          Path('/tmp/a2-techmanz-check.mjs').write_text(s[a+len(marker):b])
+          required=[
+            'Total Receivable','PARTIAL','monthlyClosings','mealSkips',
+            'Kitchen Meal Count','plan-choice','selectMemberPlan',
+            '[100,200,250].includes(planAmount)','ACCOUNT_TRANSFER',
+            'a2-live-notifications','tm-solutions-approved.webp'
+          ]
+          missing=[x for x in required if x not in s]
+          if missing: raise SystemExit('Missing live features: '+', '.join(missing))
+          forbidden=['gstatic.com/firebasejs','api.cloudinary.com/v1_1']
+          bad=[x for x in forbidden if x in s]
+          if bad: raise SystemExit('External runtime dependency remains: '+', '.join(bad))
+          print('Frontend parity markers passed')
+          PY
+          node --check /tmp/a2-techmanz-check.mjs
+          node --check migration/techmanz-build/techmanz-adapter.js
+
+      - name: Validate SQL migration contract
+        run: |
+          grep -q "010_live_parity" migration/server/sql/010_live_parity.sql
+          grep -q "member_month_plans" migration/server/sql/010_live_parity.sql
+          grep -q "member_month_carry" migration/server/sql/010_live_parity.sql
+          grep -q "billing_month" migration/server/sql/010_live_parity.sql
+          grep -q "member_snapshot" migration/server/sql/010_live_parity.sql
+
+      - name: Record build manifest
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+          root=Path('migration/techmanz-build')
+          files=[]
+          for p in sorted(x for x in root.rglob('*') if x.is_file()):
+              b=p.read_bytes()
+              files.append({'path':str(p.relative_to(root)),'sha256':hashlib.sha256(b).hexdigest(),'bytes':len(b)})
+          Path('migration/techmanz-build/BUILD-MANIFEST.json').write_text(json.dumps({'runtime':'TECH MANZ','files':files},indent=2)+'\n')
+          PY
+
+      - name: Commit deterministic build
+        run: |
+          git config user.name "TECH MANZ Migration Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add migration/techmanz-build
+          git diff --cached --quiet && exit 0
+          git commit -m "Build TECH MANZ server frontend"
+          git push origin HEAD:techmanz-server-consolidation

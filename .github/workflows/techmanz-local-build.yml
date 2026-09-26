@@ -1,0 +1,89 @@
+name: TECH MANZ Local Build
+
+on:
+  push:
+    branches: [ techmanz-server-consolidation ]
+    paths:
+      - 'migration/generated-live/**'
+      - 'migration/frontend/**'
+      - 'migration/server/**'
+      - 'migration/scripts/**'
+      - '.github/workflows/techmanz-local-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Static validation
+        run: |
+          python -m py_compile migration/server/compat_api.py migration/scripts/convert_generated_live.py
+          bash -n migration/server/deploy-techmanz.sh migration/server/verify-techmanz-staging.sh migration/server/install-production-exporter.sh migration/server/remove-production-exporter.sh migration/server/install-production-importer.sh migration/server/remove-production-migration-pages.sh migration/server/final-production-preflight.sh migration/server/repair-production-bills-and-preflight.sh migration/server/public-tunnel-smoke-test.sh migration/server/install-permanent-cloudflare-tunnel.sh
+          grep -q 'A2-MESS-HUB-PRODUCTION-EXPORT' migration/server/production-exporter.html
+          grep -q 'signInWithEmailAndPassword' migration/server/production-exporter.html
+          grep -q '2026-09-26T07:21:14.195Z' migration/server/production-importer.html
+          grep -q 'paymentTotal:2890.13' migration/server/production-importer.html
+          grep -q 'expenseTotal:1570.18' migration/server/production-importer.html
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('migration/server/production-importer.html').read_text()
+          a=s.rfind('<script>'); b=s.rfind('</script>')
+          if a<0 or b<a: raise SystemExit('Importer script block missing')
+          Path('/tmp/a2-production-importer.js').write_text(s[a+8:b])
+          PY
+          node --check /tmp/a2-production-importer.js
+          node --check migration/frontend/techmanz-compat.js
+
+      - name: Build local TECH MANZ frontend
+        run: |
+          python migration/scripts/convert_generated_live.py
+
+      - name: Validate converted application
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('migration/techmanz-build/app.html').read_text()
+          marker='<script type="module">'
+          a=s.find(marker); b=s.find('</script>',a+len(marker))
+          if a<0 or b<0:
+              raise SystemExit('Converted module script missing')
+          Path('/tmp/a2-techmanz-module.mjs').write_text(s[a+len(marker):b])
+          required=[
+              'Total Receivable','PARTIAL','monthlyClosings','mealSkips',
+              'Kitchen Meal Count','plan-choice','selectMemberPlan',
+              '[100,200,250].includes(planAmount)','ACCOUNT_TRANSFER',
+              'tm-solutions-approved.webp','techmanz-compat.js'
+          ]
+          missing=[x for x in required if x not in s]
+          if missing:
+              raise SystemExit('Missing live feature markers: '+', '.join(missing))
+          print('Converted live feature markers validated')
+          PY
+          node --check /tmp/a2-techmanz-module.mjs
+
+          if grep -RIEq 'www\.gstatic\.com/firebasejs|api\.cloudinary\.com|ucarecdn\.com|firebase\.initializeApp|firebase\.messaging\(\)' migration/techmanz-build; then
+            echo "External runtime dependency remains"
+            exit 1
+          fi
+
+          test -f migration/techmanz-build/sw.js
+          test -f migration/techmanz-build/pwa.js
+          test -f migration/techmanz-build/logo.svg
+          test -f migration/techmanz-build/techmanz-compat.js
+          test ! -f migration/techmanz-build/cloudinary-config.js
+
+      - name: Commit validated local build
+        run: |
+          git config user.name "TECH MANZ Migration Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add migration/techmanz-build
+          git diff --cached --quiet && exit 0
+          git commit -m "Build TECH MANZ local A2 MESS application"
+          git push origin HEAD:techmanz-server-consolidation

@@ -1,0 +1,13 @@
+{
+  "id":"./",
+  "name":"A2 MESS HUB",
+  "short_name":"A2 MESS HUB",
+  "description":"Eat • Track • Manage • Sync — Powered by TM Solutions",
+  "start_url":"./",
+  "scope":"./",
+  "display":"standalone",
+  "orientation":"portrait-primary",
+  "background_color":"#07130f",
+  "theme_color":"#07130f",
+  "icons":[{"src":"./logo.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
