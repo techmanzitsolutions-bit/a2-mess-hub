@@ -45,7 +45,7 @@ FAILED=0
 while IFS=$'\t' read -r DOC_ID FILE_ID LEGACY_URL BILL_URL; do
   [[ -n "$FILE_ID" ]] || { echo -e "$DOC_ID\tmissing-file-id\t$LEGACY_URL" >> "$REPORT/failed.tsv"; FAILED=$((FAILED+1)); continue; }
   TARGET="$BILL_DIR/$FILE_ID"
-  if [[ -s "$TARGET" ]]; then
+  if docker exec a2mess-api test -s "/data/bills/$FILE_ID"; then
     continue
   fi
 
@@ -91,7 +91,7 @@ while IFS=$'\t' read -r DOC_ID FILE_ID LEGACY_URL BILL_URL; do
     docker exec -u 0 a2mess-api chown 10001:10001 "/data/bills/$FILE_ID"
     docker exec -u 0 a2mess-api chmod 0644 "/data/bills/$FILE_ID"
     rm -f "$TMP"
-    [[ -s "$TARGET" ]] || {
+    docker exec a2mess-api test -s "/data/bills/$FILE_ID" || {
       echo -e "$DOC_ID\tdocker-copy-failed\t$LEGACY_URL" >> "$REPORT/failed.tsv"
       FAILED=$((FAILED+1))
       continue
@@ -114,7 +114,7 @@ echo "Failed: $FAILED"
 MISSING_AFTER=0
 : > "$REPORT/missing-after.tsv"
 while IFS=$'\t' read -r DOC_ID FILE_ID LEGACY_URL BILL_URL; do
-  if [[ -z "$FILE_ID" || ! -s "$BILL_DIR/$FILE_ID" ]]; then
+  if [[ -z "$FILE_ID" ]] || ! docker exec a2mess-api test -s "/data/bills/$FILE_ID"; then
     echo -e "$DOC_ID\t$FILE_ID\t$LEGACY_URL" >> "$REPORT/missing-after.tsv"
     MISSING_AFTER=$((MISSING_AFTER+1))
   fi
@@ -131,7 +131,7 @@ ok "All 47 referenced bill files exist locally"
 
 # Build integrity manifest.
 while IFS=$'\t' read -r DOC_ID FILE_ID LEGACY_URL BILL_URL; do
-  sha256sum "$BILL_DIR/$FILE_ID"
+  docker exec a2mess-api sha256sum "/data/bills/$FILE_ID"
 done < "$REPORT/bill-map.tsv" > "$REPORT/bill-sha256.txt"
 ok "Bill checksum manifest created"
 
