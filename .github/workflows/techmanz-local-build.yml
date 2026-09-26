@@ -25,7 +25,9 @@ jobs:
       - name: Static validation
         run: |
           python -m py_compile migration/server/compat_api.py migration/scripts/convert_generated_live.py
-          bash -n migration/server/deploy-techmanz.sh migration/server/verify-techmanz-staging.sh
+          bash -n migration/server/deploy-techmanz.sh migration/server/verify-techmanz-staging.sh migration/server/install-production-exporter.sh migration/server/remove-production-exporter.sh
+          grep -q 'A2-MESS-HUB-PRODUCTION-EXPORT' migration/server/production-exporter.html
+          grep -q 'signInWithEmailAndPassword' migration/server/production-exporter.html
           node --check migration/frontend/techmanz-compat.js
 
       - name: Build local TECH MANZ frontend
