@@ -36,7 +36,7 @@ ok "TECH MANZ frontend has no Firebase/Cloudinary/Uploadcare runtime dependency"
 docker exec "$DB_CONTAINER" pg_dump -U "$DB_USER" -d "$DB_NAME" | gzip -9 > "$OUT/a2mess_staging.sql.gz"
 ok "Fresh PostgreSQL preflight backup created"
 
-docker exec "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -AtF '|' > "$OUT/live-doc-summary.txt" <<'SQL'
+docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -AtF '|' > "$OUT/live-doc-summary.txt" <<'SQL'
 WITH c AS (
   SELECT collection,count(*)::int n
   FROM live_documents
@@ -64,7 +64,7 @@ print("counts-ok")
 PY
 ok "Production document counts match reviewed export"
 
-docker exec "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -At > "$OUT/financials.txt" <<'SQL'
+docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -At > "$OUT/financials.txt" <<'SQL'
 SELECT
   COALESCE((SELECT round(sum(COALESCE((data->>'amount')::numeric,(data->>'paidAmount')::numeric,0)),2)
             FROM live_documents WHERE collection='payments'),0),
@@ -76,7 +76,7 @@ FIN="$(cat "$OUT/financials.txt")"
 [[ "$FIN" == "2890.13|1570.18" ]] || fail "Financial totals mismatch: $FIN"
 ok "Payments AED 2890.13 and expenses AED 1570.18 match reviewed export"
 
-docker exec "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -At > "$OUT/roles.txt" <<'SQL'
+docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -At > "$OUT/roles.txt" <<'SQL'
 SELECT COALESCE(data->>'role',''),count(*)
 FROM live_documents
 WHERE collection='users'
@@ -97,7 +97,7 @@ if got!=expected:
 PY
 ok "User roles match production: 1 Admin, 1 Chef, 10 Members"
 
-docker exec "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -At > "$OUT/bills.txt" <<'SQL'
+docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -At > "$OUT/bills.txt" <<'SQL'
 SELECT
   count(*) FILTER (WHERE COALESCE(data->>'billUrl','') LIKE '/api/compat/files/bills/%'),
   count(*) FILTER (WHERE COALESCE(data->>'billUrl','') ~ '^https?://'),
@@ -110,7 +110,7 @@ BILLS="$(cat "$OUT/bills.txt")"
 [[ "$BILLS" == "47|0|11" ]] || fail "Bill migration mismatch (local|external|empty): $BILLS"
 ok "47 bill images local, 0 external URLs, 11 expenses without bill images"
 
-MISSING="$(docker exec "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -At <<'SQL'
+MISSING="$(docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -At <<'SQL'
 SELECT count(*)
 FROM live_documents
 WHERE collection='expenses'
@@ -123,7 +123,7 @@ WHERE collection='expenses'
 SQL
 )"
 # Verify actual files directly from JSON file names.
-docker exec "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -At <<'SQL' > "$OUT/bill-files.txt"
+docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -At <<'SQL' > "$OUT/bill-files.txt"
 SELECT data->>'billFileId'
 FROM live_documents
 WHERE collection='expenses'
@@ -137,7 +137,7 @@ done < "$OUT/bill-files.txt"
 ok "All referenced local bill files exist on disk"
 
 # Ensure production user documents are linked to local UUID-like auth IDs.
-docker exec "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -At > "$OUT/user-link-check.txt" <<'SQL'
+docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -At > "$OUT/user-link-check.txt" <<'SQL'
 SELECT count(*)
 FROM live_documents
 WHERE collection='users'
