@@ -25,9 +25,20 @@ jobs:
       - name: Static validation
         run: |
           python -m py_compile migration/server/compat_api.py migration/scripts/convert_generated_live.py
-          bash -n migration/server/deploy-techmanz.sh migration/server/verify-techmanz-staging.sh migration/server/install-production-exporter.sh migration/server/remove-production-exporter.sh
+          bash -n migration/server/deploy-techmanz.sh migration/server/verify-techmanz-staging.sh migration/server/install-production-exporter.sh migration/server/remove-production-exporter.sh migration/server/install-production-importer.sh migration/server/remove-production-migration-pages.sh
           grep -q 'A2-MESS-HUB-PRODUCTION-EXPORT' migration/server/production-exporter.html
           grep -q 'signInWithEmailAndPassword' migration/server/production-exporter.html
+          grep -q '2026-09-26T07:21:14.195Z' migration/server/production-importer.html
+          grep -q 'paymentTotal:2890.13' migration/server/production-importer.html
+          grep -q 'expenseTotal:1570.18' migration/server/production-importer.html
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('migration/server/production-importer.html').read_text()
+          a=s.rfind('<script>'); b=s.rfind('</script>')
+          if a<0 or b<a: raise SystemExit('Importer script block missing')
+          Path('/tmp/a2-production-importer.js').write_text(s[a+8:b])
+          PY
+          node --check /tmp/a2-production-importer.js
           node --check migration/frontend/techmanz-compat.js
 
       - name: Build local TECH MANZ frontend
