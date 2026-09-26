@@ -20,17 +20,14 @@ cleanup(){
   rm -rf "$TMP" 2>/dev/null || true
   if [[ -n "${CHEF_ID:-}" && -n "${CHEF_HASH:-}" ]]; then
     docker exec "$DB_CONTAINER" psql -q -U "$DB_USER" -d "$DB_NAME" \
-      -v uid="$CHEF_ID" -v ph="$CHEF_HASH" -v act="$CHEF_ACTIVE" \
-      -c "UPDATE users SET password_hash=:'ph',active=:'act'::boolean WHERE id=:'uid'::uuid;" >/dev/null 2>&1 || true
+      -c "UPDATE users SET password_hash='$CHEF_HASH',active='$CHEF_ACTIVE'::boolean WHERE id='$CHEF_ID'::uuid;" >/dev/null 2>&1 || true
   fi
   if [[ -n "${MEMBER_ID:-}" && -n "${MEMBER_HASH:-}" ]]; then
     docker exec "$DB_CONTAINER" psql -q -U "$DB_USER" -d "$DB_NAME" \
-      -v uid="$MEMBER_ID" -v ph="$MEMBER_HASH" -v act="$MEMBER_ACTIVE" \
-      -c "UPDATE users SET password_hash=:'ph',active=:'act'::boolean WHERE id=:'uid'::uuid;" >/dev/null 2>&1 || true
+      -c "UPDATE users SET password_hash='$MEMBER_HASH',active='$MEMBER_ACTIVE'::boolean WHERE id='$MEMBER_ID'::uuid;" >/dev/null 2>&1 || true
     if [[ -n "${MEMBER_PROFILE_ACTIVE:-}" ]]; then
       docker exec "$DB_CONTAINER" psql -q -U "$DB_USER" -d "$DB_NAME" \
-        -v uid="$MEMBER_ID" -v act="$MEMBER_PROFILE_ACTIVE" \
-        -c "UPDATE members SET active=:'act'::boolean WHERE user_id=:'uid'::uuid;" >/dev/null 2>&1 || true
+        -c "UPDATE members SET active='$MEMBER_PROFILE_ACTIVE'::boolean WHERE user_id='$MEMBER_ID'::uuid;" >/dev/null 2>&1 || true
     fi
   fi
   if [[ -n "${BILL_FILE_ID:-}" ]]; then rm -f "$ROOT/storage/bills/$BILL_FILE_ID" 2>/dev/null || true; fi
@@ -146,7 +143,7 @@ if [[ -n "$CHEF_ROW" ]]; then
   IFS='|' read -r CHEF_ID CHEF_EMAIL CHEF_HASH CHEF_ACTIVE <<< "$CHEF_ROW"
   CHEF_PASS="TmVerify!Chef$STAMP"
   CHEF_TEST_HASH="$(make_hash "$CHEF_PASS")"
-  docker exec "$DB_CONTAINER" psql -q -U "$DB_USER" -d "$DB_NAME" -v uid="$CHEF_ID" -v ph="$CHEF_TEST_HASH" -c "UPDATE users SET password_hash=:'ph',active=TRUE WHERE id=:'uid'::uuid;" >/dev/null
+  docker exec "$DB_CONTAINER" psql -q -U "$DB_USER" -d "$DB_NAME" -c "UPDATE users SET password_hash='$CHEF_TEST_HASH',active=TRUE WHERE id='$CHEF_ID'::uuid;" >/dev/null
   PAYLOAD="$(E="$CHEF_EMAIL" P="$CHEF_PASS" python3 - <<'PY'
 import os,json
 print(json.dumps({"email":os.environ["E"],"password":os.environ["P"]}))
@@ -169,7 +166,7 @@ if [[ -n "$MEMBER_ROW" ]]; then
   MEMBER_PROFILE_ACTIVE="$(docker exec "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -Atc "SELECT active FROM members WHERE user_id='$MEMBER_ID'::uuid LIMIT 1;" || true)"
   MEMBER_PASS="TmVerify!Member$STAMP"
   MEMBER_TEST_HASH="$(make_hash "$MEMBER_PASS")"
-  docker exec "$DB_CONTAINER" psql -q -U "$DB_USER" -d "$DB_NAME" -v uid="$MEMBER_ID" -v ph="$MEMBER_TEST_HASH" -c "UPDATE users SET password_hash=:'ph',active=TRUE WHERE id=:'uid'::uuid; UPDATE members SET active=TRUE WHERE user_id=:'uid'::uuid;" >/dev/null
+  docker exec "$DB_CONTAINER" psql -q -U "$DB_USER" -d "$DB_NAME" -c "UPDATE users SET password_hash='$MEMBER_TEST_HASH',active=TRUE WHERE id='$MEMBER_ID'::uuid; UPDATE members SET active=TRUE WHERE user_id='$MEMBER_ID'::uuid;" >/dev/null
   PAYLOAD="$(E="$MEMBER_EMAIL" P="$MEMBER_PASS" python3 - <<'PY'
 import os,json
 print(json.dumps({"email":os.environ["E"],"password":os.environ["P"]}))
