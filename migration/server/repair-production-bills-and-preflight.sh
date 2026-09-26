@@ -84,8 +84,18 @@ while IFS=$'\t' read -r DOC_ID FILE_ID LEGACY_URL BILL_URL; do
         ;;
     esac
 
-    mv "$TMP" "$TARGET"
-    chmod 644 "$TARGET"
+    # The storage bind mount is owned for the API container (UID 10001),
+    # not the interactive techmanz shell user. Copy through Docker so the
+    # host user does not need write permission on /srv/techmanz/a2-mess/storage/bills.
+    docker cp "$TMP" "a2mess-api:/data/bills/$FILE_ID"
+    docker exec -u 0 a2mess-api chown 10001:10001 "/data/bills/$FILE_ID"
+    docker exec -u 0 a2mess-api chmod 0644 "/data/bills/$FILE_ID"
+    rm -f "$TMP"
+    [[ -s "$TARGET" ]] || {
+      echo -e "$DOC_ID\tdocker-copy-failed\t$LEGACY_URL" >> "$REPORT/failed.tsv"
+      FAILED=$((FAILED+1))
+      continue
+    }
     echo -e "$DOC_ID\t$FILE_ID\t$LEGACY_URL" >> "$REPORT/repaired.tsv"
     REPAIRED=$((REPAIRED+1))
   else
