@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A2 MESS HUB Production Export</title>
+<style>
+body{margin:0;background:#03130e;color:#e9fff5;font-family:Arial,sans-serif}
+.wrap{max-width:780px;margin:40px auto;padding:20px}
+.card{background:#08251a;border:1px solid #1d6b4c;border-radius:18px;padding:24px;box-shadow:0 18px 60px #0008}
+h1{margin:0 0 8px;color:#4df0a8}p{color:#b8d7ca;line-height:1.5}
+label{display:block;margin:14px 0 6px;font-size:12px;font-weight:700;color:#9bd8c0}
+input{width:100%;box-sizing:border-box;background:#031710;border:1px solid #205c46;border-radius:10px;padding:13px;color:#fff}
+button{margin-top:18px;background:#19d98c;color:#02150d;border:0;border-radius:10px;padding:13px 18px;font-weight:800;cursor:pointer}
+button:disabled{opacity:.5;cursor:wait}
+pre{white-space:pre-wrap;background:#02100b;border:1px solid #174b38;border-radius:10px;padding:14px;min-height:100px}
+.small{font-size:12px;color:#91b9a8}
+</style>
+</head>
+<body>
+<div class="wrap"><div class="card">
+<h1>A2 MESS HUB — Production Export</h1>
+<p>This one-time migration tool reads the current production Firebase database and downloads a JSON backup to this computer. It does not modify Firebase or the TECH MANZ server.</p>
+<label>Production Admin Email</label>
+<input id="email" type="email" autocomplete="username">
+<label>Production Admin Password</label>
+<input id="password" type="password" autocomplete="current-password">
+<button id="run">EXPORT PRODUCTION DATA</button>
+<p class="small">The password stays in this browser session and is not written to the export file.</p>
+<pre id="log">Ready.</pre>
+</div></div>
+<script type="module">
+import{initializeApp}from'https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js';
+import{getAuth,signInWithEmailAndPassword,signOut}from'https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js';
+import{getFirestore,collection,getDocs,doc,getDoc}from'https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js';
+
+const firebaseConfig={apiKey:'AIzaSyDOUJGSLfDrmmc74YUGRkDU1b4P2gYmGyU',authDomain:'a2-mess-hub.firebaseapp.com',projectId:'a2-mess-hub',storageBucket:'a2-mess-hub.firebasestorage.app',messagingSenderId:'451214844236',appId:'1:451214844236:android:546b7783ecf04e40af6fe9'};
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
+const log=document.getElementById('log'),btn=document.getElementById('run');
+
+function plain(v){
+  if(v===null||v===undefined||typeof v!=='object')return v;
+  if(typeof v.toDate==='function'){const d=v.toDate();return {__a2Timestamp:d.toISOString()}}
+  if(Array.isArray(v))return v.map(plain);
+  const o={};for(const[k,x]of Object.entries(v))o[k]=plain(x);return o;
+}
+function say(x){log.textContent+=('\n'+x);log.scrollTop=log.scrollHeight}
+async function readCollection(name){
+  say('Reading '+name+'...');
+  const snap=await getDocs(collection(db,name));
+  const rows=snap.docs.map(d=>({id:d.id,data:plain(d.data())}));
+  say(name+': '+rows.length);
+  return rows;
+}
+function download(name,obj){
+  const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+btn.onclick=async()=>{
+  btn.disabled=true;log.textContent='Starting secure read-only export...';
+  try{
+    const email=document.getElementById('email').value.trim().toLowerCase();
+    const password=document.getElementById('password').value;
+    if(!email||!password)throw new Error('Enter production Admin email and password');
+    const cred=await signInWithEmailAndPassword(auth,email,password);
+    say('Authenticated as '+(cred.user.email||email));
+    const names=['users','members','inventory','meals','mealSkips','expenses','payments','monthlyClosings','settings','notifications'];
+    const collections={};
+    for(const name of names)collections[name]=await readCollection(name);
+    say('Reading system/config...');
+    const cfg=await getDoc(doc(db,'system','config'));
+    collections.system=cfg.exists()?[{id:'config',data:plain(cfg.data())}]:[];
+    say('system: '+collections.system.length);
+    const pack={
+      format:'A2-MESS-HUB-PRODUCTION-EXPORT',
+      version:1,
+      projectId:'a2-mess-hub',
+      exportedAt:new Date().toISOString(),
+      exportedBy:cred.user.email||email,
+      collections
+    };
+    const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+    download('A2-PRODUCTION-EXPORT-'+stamp+'.json',pack);
+    say('EXPORT PASSED — JSON downloaded.');
+    say('Firebase was not modified.');
+    document.getElementById('password').value='';
+    await signOut(auth);
+  }catch(e){
+    console.error(e);say('FAILED: '+(e?.message||e));
+  }finally{btn.disabled=false}
+};
+</script>
+</body></html>
