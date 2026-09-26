@@ -132,7 +132,7 @@ ORDER BY 1;
 SQL
 while IFS= read -r f; do
   [[ -n "$f" ]] || continue
-  [[ -f "$ROOT/storage/bills/$f" ]] || fail "Missing local bill file: $f"
+  docker exec a2mess-api test -s "/data/bills/$f" || fail "Missing local bill file: $f"
 done < "$OUT/bill-files.txt"
 ok "All referenced local bill files exist on disk"
 
