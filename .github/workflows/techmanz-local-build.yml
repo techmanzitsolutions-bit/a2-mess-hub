@@ -89,7 +89,7 @@ jobs:
           test -f migration/techmanz-build/pwa.js
           test -f migration/techmanz-build/logo.svg
           test -f migration/techmanz-build/techmanz-compat.js
-          grep -q "techmanz-expense-date-20260927" migration/techmanz-build/sw.js
+          grep -q "techmanz-mobile-input-v2-20260927" migration/techmanz-build/sw.js
           test ! -f migration/techmanz-build/cloudinary-config.js
 
       - name: Commit validated local build
