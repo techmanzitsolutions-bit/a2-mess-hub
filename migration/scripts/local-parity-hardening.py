@@ -82,9 +82,26 @@ css = """<style id="a2-techmanz-expense-parity">
 if 'id="a2-techmanz-expense-parity"' not in s:
     s = s.replace("</head>", css + "\n</head>", 1)
 
+# Mobile login must work directly from the rendered HTML, without waiting for
+# a post-render helper to mutate the fields.
+login_old = '<div class="field span2"><label>Email</label><input id=email type=email></div><div class="field span2"><label>Password</label><input id=pass type=password></div>'
+login_new = '<div class="field span2"><label for=email>Email</label><input id=email name=email type=email inputmode=email autocomplete=username autocapitalize=none spellcheck=false enterkeyhint=next></div><div class="field span2"><label for=pass>Password</label><input id=pass name=password type=password inputmode=text autocomplete=current-password enterkeyhint=go></div>'
+if login_old not in s:
+    raise SystemExit("Login field block not found")
+s = s.replace(login_old, login_new, 1)
+
+login_css = """<style id="a2-mobile-input-v2">
+#email,#pass{position:relative!important;z-index:5!important;pointer-events:auto!important;touch-action:auto!important;-webkit-user-select:text!important;user-select:text!important;caret-color:#59f3b0!important}
+.center .panel .field{position:relative;z-index:4}
+@media(max-width:900px){#email,#pass{font-size:16px!important;min-height:48px!important}}
+</style>"""
+if 'id="a2-mobile-input-v2"' not in s:
+    s = s.replace("</head>", login_css + "\n</head>", 1)
+
 required = [
     "Added Date", "Added By / Actions", "function a2Date(v)",
     "timeZone:'Asia/Dubai'", "Date not recorded",
+    "inputmode=email", "autocomplete=username", 'id="a2-mobile-input-v2"',
     "function expenses()", "function payments()", "function memberSummary(",
     "function monthClosePage()", "function mealSkipPage()", "function backupPage()",
     "function reports()", "function users()", "function members()",
@@ -100,7 +117,7 @@ app.write_text(s)
 sw = app.parent / "sw.js"
 if sw.exists():
     t = sw.read_text()
-    t, n = re.subn(r"const BUILD='[^']+'", "const BUILD='techmanz-expense-date-20260927'", t, count=1)
+    t, n = re.subn(r"const BUILD='[^']+'", "const BUILD='techmanz-mobile-input-v2-20260927'", t, count=1)
     if n != 1:
         raise SystemExit("Service-worker BUILD marker not found")
     sw.write_text(t)
