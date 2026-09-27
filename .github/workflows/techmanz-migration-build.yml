@@ -56,7 +56,8 @@ jobs:
           PY
           node --check /tmp/a2-techmanz-check.mjs
           node --check migration/techmanz-build/techmanz-compat.js
-          grep -q "techmanz-full-parity-20260927" migration/techmanz-build/sw.js
+          node --check migration/techmanz-build/input-hardening.js
+          grep -q "techmanz-input-hardening-20260927" migration/techmanz-build/sw.js
 
       - name: Validate SQL migration contract
         run: |
