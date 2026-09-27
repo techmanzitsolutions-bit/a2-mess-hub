@@ -89,7 +89,7 @@ required = [
     "function monthClosePage()", "function mealSkipPage()", "function backupPage()",
     "function reports()", "function users()", "function members()",
     "Kitchen Meal Count", "monthlyClosings", "mealSkips", "planByMonth",
-    "manualCarryByMonth", "ACCOUNT_TRANSFER", "a2-live-notifications"
+    "manualCarryByMonth", "ACCOUNT_TRANSFER", "a2-live-notifications", "input-hardening.js"
 ]
 missing = [x for x in required if x not in s]
 if missing:
@@ -100,7 +100,7 @@ app.write_text(s)
 sw = app.parent / "sw.js"
 if sw.exists():
     t = sw.read_text()
-    t, n = re.subn(r"const BUILD='[^']+'", "const BUILD='techmanz-full-parity-20260927'", t, count=1)
+    t, n = re.subn(r"const BUILD='[^']+'", "const BUILD='techmanz-input-hardening-20260927'", t, count=1)
     if n != 1:
         raise SystemExit("Service-worker BUILD marker not found")
     sw.write_text(t)
