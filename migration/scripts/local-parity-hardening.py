@@ -99,9 +99,9 @@ if 'id="a2-mobile-input-v2"' not in s:
     s = s.replace("</head>", login_css + "\n</head>", 1)
 
 required = [
-    "Added Date", "Added By / Actions", "function a2Date(v)",
+    "Added Date", "Added By / Actions", "function a2Date(v,depth=0)",
     "timeZone:'Asia/Dubai'", "Date not recorded",
-    "inputmode=email", "autocomplete=username", 'id="a2-mobile-input-v2"',
+    "inputmode=email", "autocomplete=off", 'id="a2-mobile-input-v2"',
     "function expenses()", "function payments()", "function memberSummary(",
     "function monthClosePage()", "function mealSkipPage()", "function backupPage()",
     "function reports()", "function users()", "function members()",
