@@ -227,7 +227,7 @@ WHERE collection='expenses'
 PROVIDER_REFS="$(
 docker exec "$DB" psql -U "$DBUSER" -d "$DBNAME" -Atc "
 SELECT count(*) FROM live_documents
-WHERE data::text ~* 'cloudinary|ucarecdn|firebaseapp';
+WHERE data::text ~* 'cloudinary|uploadcare|ucarecdn|firebaseapp';
 "
 )"
 [[ "$PROVIDER_REFS" == "0" ]] || fail "$PROVIDER_REFS cloud-provider references remain in live data"
