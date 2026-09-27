@@ -26,7 +26,7 @@
     }
 
     var ids={
-      email:{type:'email',inputmode:'email',autocomplete:'email',autocapitalize:'none',spellcheck:'false'},
+      email:{type:'text',inputmode:'email',autocomplete:'off',autocapitalize:'none',autocorrect:'off',spellcheck:'false'},
       pass:{type:'password',inputmode:'text',autocomplete:'current-password'},
       ownerName:{type:'text',inputmode:'text',autocomplete:'name'},
       ownerEmail:{type:'email',inputmode:'email',autocomplete:'email',autocapitalize:'none',spellcheck:'false'},
@@ -157,6 +157,7 @@
   // selection and accessibility behavior are preserved.
   document.addEventListener('pointerdown',focusEditableFromGesture,true);
   document.addEventListener('click',focusEditableFromGesture,true);
+  document.addEventListener('touchend',focusEditableFromGesture,true);
 
   document.addEventListener('DOMContentLoaded',boot);
   window.addEventListener('load',boot);
