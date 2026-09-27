@@ -6,7 +6,8 @@ out=Path(sys.argv[2] if len(sys.argv)>2 else 'migration/techmanz-build')
 adapter=Path(sys.argv[3] if len(sys.argv)>3 else 'migration/frontend/techmanz-compat.js')
 if out.exists(): shutil.rmtree(out)
 shutil.copytree(src,out)
-shutil.copy2(adapter,out/'techmanz-compat.js')
+shutil.copy2(adapter,out/'techmanz-compat.js','input-hardening.js')
+shutil.copy2(Path('migration/frontend/input-hardening.js'),out/'input-hardening.js')
 app=out/'app.html'; s=app.read_text()
 
 imports=re.compile(r"import\{initializeApp\}from'https://www\.gstatic\.com/firebasejs/11\.9\.1/firebase-app\.js';\s*import\{getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,sendPasswordResetEmail,signOut\}from'https://www\.gstatic\.com/firebasejs/11\.9\.1/firebase-auth\.js';\s*import\{getFirestore,doc,getDoc,setDoc,collection,onSnapshot,addDoc,updateDoc,deleteDoc,serverTimestamp,writeBatch,query,where\}from'https://www\.gstatic\.com/firebasejs/11\.9\.1/firebase-firestore\.js';\s*import\{getMessaging,getToken,onMessage,isSupported\}from'https://www\.gstatic\.com/firebasejs/11\.9\.1/firebase-messaging\.js';")
@@ -53,6 +54,7 @@ repls={
 for a,b in repls.items(): s=s.replace(a,b)
 s=s.replace("imageProvider:billUrl?(billUrl.includes('res.cloudinary.com')?'cloudinary':(old.imageProvider||'uploadcare')):''","imageProvider:billUrl?'local':''")
 s=s.replace('src="${safe}-/preview/1200x1200/" alt="Bill" onerror="this.onerror=null;this.src=\'${safe}\'"','src="${safe}" alt="Bill"')
+s=s.replace('</body>','<script src="./input-hardening.js"></script>\n</body>',1)
 app.write_text(s)
 
 sw=out/'sw.js'
