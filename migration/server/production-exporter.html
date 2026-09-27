@@ -66,9 +66,15 @@ btn.onclick=async()=>{
     if(!email||!password)throw new Error('Enter production Admin email and password');
     const cred=await signInWithEmailAndPassword(auth,email,password);
     say('Authenticated as '+(cred.user.email||email));
-    const names=['users','members','inventory','meals','mealSkips','expenses','payments','monthlyClosings','settings','notifications','pushTokens'];
+    const names=['users','members','inventory','meals','mealSkips','expenses','payments','monthlyClosings','settings','notifications'];
     const collections={};
     for(const name of names)collections[name]=await readCollection(name);
+    try{
+      collections.pushTokens=await readCollection('pushTokens');
+    }catch(e){
+      collections.pushTokens=[];
+      say('pushTokens: SKIPPED ('+(e?.message||e)+')');
+    }
     say('Reading system/config...');
     const cfg=await getDoc(doc(db,'system','config'));
     collections.system=cfg.exists()?[{id:'config',data:plain(cfg.data())}]:[];
