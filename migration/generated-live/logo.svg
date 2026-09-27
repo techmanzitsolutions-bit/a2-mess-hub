@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<defs>
+ <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff1ad"/><stop offset=".38" stop-color="#f6c34f"/><stop offset="1" stop-color="#a8610d"/></linearGradient>
+ <linearGradient id="l" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b9ff6d"/><stop offset=".5" stop-color="#39c95c"/><stop offset="1" stop-color="#0f6d34"/></linearGradient>
+ <filter id="glow"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect width="512" height="512" rx="112" fill="#07130f"/>
+<circle cx="256" cy="256" r="202" fill="none" stroke="#f6c34f" stroke-width="6" opacity=".55"/>
+<!-- chef cap -->
+<path d="M139 140c-31-3-47-25-41-51 6-26 33-39 56-28 9-28 42-39 64-21 20-22 60-14 69 15 29-9 55 12 53 40-2 25-21 41-47 43l-9 33H149z" fill="#fff7dc" stroke="#e7b83f" stroke-width="8"/>
+<path d="M151 148h137l-9 30H157z" fill="url(#g)"/>
+<!-- A2 -->
+<path d="M116 357l74-190h65l74 190h-57l-14-41h-75l-14 41zm82-88h45l-22-68z" fill="url(#g)" filter="url(#glow)"/>
+<path d="M295 209c8-39 39-61 82-61 49 0 82 28 82 69 0 35-18 57-57 84l-35 24h98v32H294v-27c0-20 7-34 26-47l47-33c24-17 33-27 33-42 0-17-12-28-30-28-19 0-31 11-34 34z" fill="url(#g)"/>
+<!-- fork -->
+<path d="M190 218v83m-12-83v38m12-38v38m12-38v38m-24 0h24" stroke="#07130f" stroke-width="8" stroke-linecap="round" fill="none"/>
+<!-- spoon -->
+<ellipse cx="232" cy="239" rx="13" ry="24" fill="#07130f"/><path d="M232 261v41" stroke="#07130f" stroke-width="8" stroke-linecap="round"/>
+<!-- leaves -->
+<path d="M248 345c-68 14-107-10-126-57 62-5 104 10 126 57z" fill="url(#l)" stroke="#7ff58a" stroke-width="4"/><path d="M259 346c49-57 96-71 145-55-20 51-66 73-145 55z" fill="url(#l)" stroke="#7ff58a" stroke-width="4"/><path d="M177 307c31 10 51 21 72 39M338 309c-28 10-51 22-77 38" stroke="#d6ff91" stroke-width="4" fill="none" opacity=".8"/>
+<!-- label -->
+<text x="256" y="413" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="42" font-weight="900" letter-spacing="5" fill="#f6c34f">A2</text>
+<text x="256" y="454" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="25" font-weight="800" letter-spacing="4" fill="#ffffff">MESS <tspan fill="#63df68">HUB</tspan></text>
+</svg>

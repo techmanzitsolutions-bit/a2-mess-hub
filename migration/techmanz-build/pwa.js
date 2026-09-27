@@ -1,0 +1,1 @@
+(()=>{let r=false;if('serviceWorker'in navigator){window.addEventListener('load',async()=>{try{const x=await navigator.serviceWorker.register('./sw.js',{scope:'./'});x.update().catch(()=>{})}catch(e){console.warn(e)}});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(r)return;r=true;location.reload()})}})();
