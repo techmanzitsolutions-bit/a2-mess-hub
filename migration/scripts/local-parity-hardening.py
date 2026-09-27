@@ -100,7 +100,7 @@ app.write_text(s)
 sw = app.parent / "sw.js"
 if sw.exists():
     t = sw.read_text()
-    t, n = re.subn(r"const BUILD='[^']+'", "const BUILD='techmanz-input-hardening-20260927'", t, count=1)
+    t, n = re.subn(r"const BUILD='[^']+'", "const BUILD='techmanz-expense-date-20260927'", t, count=1)
     if n != 1:
         raise SystemExit("Service-worker BUILD marker not found")
     sw.write_text(t)
