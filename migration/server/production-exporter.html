@@ -66,7 +66,7 @@ btn.onclick=async()=>{
     if(!email||!password)throw new Error('Enter production Admin email and password');
     const cred=await signInWithEmailAndPassword(auth,email,password);
     say('Authenticated as '+(cred.user.email||email));
-    const names=['users','members','inventory','meals','mealSkips','expenses','payments','monthlyClosings','settings','notifications'];
+    const names=['users','members','inventory','meals','mealSkips','expenses','payments','monthlyClosings','settings','notifications','pushTokens'];
     const collections={};
     for(const name of names)collections[name]=await readCollection(name);
     say('Reading system/config...');
