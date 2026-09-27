@@ -5,7 +5,7 @@ import sys
 app = Path(sys.argv[1] if len(sys.argv) > 1 else "migration/techmanz-build/app.html")
 s = app.read_text()
 
-date_block = r"""function a2Date(v){try{if(!v)return null;const d=typeof v?.toDate==='function'?v.toDate():v?.__a2Timestamp?new Date(v.__a2Timestamp):new Date(v);return d instanceof Date&&!isNaN(d)?d:null}catch{return null}}
+date_block = r"""function a2Date(v){try{if(!v)return null;if(typeof v?.toDate==='function'){const d=v.toDate();return d instanceof Date&&!isNaN(d)?d:null}let raw=v?.__a2Timestamp??v;if(typeof raw?.toDate==='function')raw=raw.toDate();if(raw&&typeof raw==='object'&&raw._date)raw=raw._date;const d=raw instanceof Date?raw:new Date(raw);return d instanceof Date&&!isNaN(d)?d:null}catch{return null}}
 function expenseDate(x){const d=a2Date(x?.createdAt)||a2Date(x?.updatedAt);return d?d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric',timeZone:'Asia/Dubai'}):'Date not recorded'}
 function expenseAddedBy(x){return x?.createdByName||((x?.createdBy&&x.createdBy===auth.currentUser?.uid)?state.profile.name:'Admin / Chef')}
 function expenseDateKey(x){const t=a2Date(x?.createdAt)||a2Date(x?.updatedAt);return t?t.getTime():0}
