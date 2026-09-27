@@ -60,6 +60,11 @@ echo "Starting Tailscale Funnel..."
 echo "If Tailscale prints an approval URL, open it in your browser and approve Funnel."
 echo
 
+# Allow the logged-in Ubuntu user to manage serve/funnel without running every
+# Tailscale command as root. Tailscale explicitly recommends this when serve
+# config access is denied.
+sudo tailscale set --operator="$USER"
+
 set +e
 tailscale funnel --bg 3200
 RC=$?
