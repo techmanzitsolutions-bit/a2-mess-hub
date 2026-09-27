@@ -98,6 +98,12 @@ login_css = """<style id="a2-mobile-input-v2">
 if 'id="a2-mobile-input-v2"' not in s:
     s = s.replace("</head>", login_css + "\n</head>", 1)
 
+# Remove migration/developer notes from the real user-facing application.
+s=s.replace('<div class=note style="margin-top:12px">The Users page now combines Firestore user profiles with linked Member records, so an existing login cannot disappear from this list just because its profile/link data is incomplete.</div>','')
+s=s.replace('<div class=note style="margin-top:12px"><b>What is saved:</b> current Members, Inventory and Meals snapshots, plus Payments and Expenses for the selected month. Expense bill-image links are included. local authentication passwords are never included.</div>','')
+s=s.replace('Role-based access and local authentication','Role-based account security')
+s=s.replace('Meal skip cloud save failed','Meal skip save failed')
+
 required = [
     "Added Date", "Added By / Actions", "function a2Date(v,depth=0)",
     "timeZone:'Asia/Dubai'", "Date not recorded",
@@ -117,7 +123,7 @@ app.write_text(s)
 sw = app.parent / "sw.js"
 if sw.exists():
     t = sw.read_text()
-    t, n = re.subn(r"const BUILD='[^']+'", "const BUILD='techmanz-mobile-input-v3-20260927'", t, count=1)
+    t, n = re.subn(r"const BUILD='[^']+'", "const BUILD='techmanz-final-ui-auth-20260927'", t, count=1)
     if n != 1:
         raise SystemExit("Service-worker BUILD marker not found")
     sw.write_text(t)
