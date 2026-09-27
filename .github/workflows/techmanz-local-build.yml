@@ -102,4 +102,5 @@ jobs:
           git add migration/techmanz-build
           git diff --cached --quiet && exit 0
           git commit -m "Build TECH MANZ local A2 MESS application"
+          git pull --rebase origin techmanz-server-consolidation
           git push origin HEAD:techmanz-server-consolidation
