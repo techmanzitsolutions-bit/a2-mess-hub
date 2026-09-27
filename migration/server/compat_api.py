@@ -2,6 +2,8 @@ import json
 import mimetypes
 import os
 import uuid
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -32,6 +34,11 @@ class CompatCreateUser(BaseModel):
 class CompatResetPassword(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=200)
+
+
+class LegacyLoginRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=1, max_length=200)
 
 
 class BatchRequest(BaseModel):
@@ -230,8 +237,8 @@ def create_compat_router(db, current_user, allow_roles, hash_password):
                 with conn.cursor() as cur:
                     cur.execute(
                         """
-                        INSERT INTO users(id,name,email,role,active,password_hash)
-                        VALUES(%s,%s,%s,'member',TRUE,%s)
+                        INSERT INTO users(id,name,email,role,active,password_hash,legacy_auth_migrated_at)
+                        VALUES(%s,%s,%s,'member',TRUE,%s,NOW())
                         """,
                         (user_id, name, email, hash_password(req.password)),
                     )
@@ -254,13 +261,108 @@ def create_compat_router(db, current_user, allow_roles, hash_password):
         with db() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "UPDATE users SET password_hash=%s,updated_at=NOW() WHERE lower(email)=lower(%s) RETURNING id",
+                    """
+                    UPDATE users
+                    SET password_hash=%s,legacy_auth_migrated_at=NOW(),updated_at=NOW()
+                    WHERE lower(email)=lower(%s)
+                    RETURNING id
+                    """,
                     (hash_password(req.password), email),
                 )
                 if cur.fetchone() is None:
                     raise HTTPException(status_code=404, detail="User not found")
             conn.commit()
         return {"status": "updated"}
+
+    @router.post("/auth/legacy-login")
+    def legacy_login(req: LegacyLoginRequest):
+        api_key = os.getenv("A2_LEGACY_FIREBASE_API_KEY", "").strip()
+        if not api_key:
+            raise HTTPException(status_code=503, detail="Legacy login bridge is not configured")
+        email = str(req.email).strip().lower()
+        url = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + api_key
+        payload = json.dumps({
+            "email": email,
+            "password": req.password,
+            "returnSecureToken": False,
+        }).encode("utf-8")
+        request = urllib.request.Request(
+            url, data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=15) as response:
+                remote = json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError:
+            raise HTTPException(status_code=401, detail="INVALID_LOGIN_CREDENTIALS")
+        except Exception:
+            raise HTTPException(status_code=503, detail="Legacy login verification unavailable")
+
+        local_id = str(remote.get("localId") or "")
+        remote_email = str(remote.get("email") or "").lower()
+        if not local_id or remote_email != email:
+            raise HTTPException(status_code=401, detail="INVALID_LOGIN_CREDENTIALS")
+
+        with db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id,firebase_uid,active FROM users WHERE lower(email)=lower(%s) LIMIT 1",
+                    (email,),
+                )
+                row = cur.fetchone()
+                if row is None:
+                    raise HTTPException(status_code=404, detail="Local account not found")
+                user_id, firebase_uid, active = row
+                if not active:
+                    raise HTTPException(status_code=403, detail="Account disabled")
+                if firebase_uid and str(firebase_uid) != local_id:
+                    raise HTTPException(status_code=409, detail="Legacy account identity mismatch")
+                cur.execute(
+                    """
+                    UPDATE users
+                    SET password_hash=%s,
+                        firebase_uid=COALESCE(firebase_uid,%s),
+                        legacy_auth_migrated_at=NOW(),
+                        updated_at=NOW()
+                    WHERE id=%s
+                    """,
+                    (hash_password(req.password), local_id, user_id),
+                )
+            conn.commit()
+        return {"status": "migrated"}
+
+    @router.get("/auth/migration-status")
+    def legacy_auth_migration_status(admin=Depends(allow_roles("admin"))):
+        with db() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT
+                      count(*) FILTER (WHERE active=TRUE),
+                      count(*) FILTER (WHERE active=TRUE AND legacy_auth_migrated_at IS NOT NULL)
+                    FROM users
+                    """
+                )
+                total, migrated = cur.fetchone()
+                cur.execute(
+                    """
+                    SELECT email,name,role
+                    FROM users
+                    WHERE active=TRUE AND legacy_auth_migrated_at IS NULL
+                    ORDER BY role,email
+                    """
+                )
+                pending = [
+                    {"email": r[0], "name": r[1], "role": r[2]}
+                    for r in cur.fetchall()
+                ]
+        return {
+            "active_users": int(total or 0),
+            "migrated": int(migrated or 0),
+            "pending": pending,
+            "ready_to_retire_firebase_auth": int(total or 0) == int(migrated or 0),
+        }
 
     @router.get("/docs/{collection}")
     def list_docs(collection: str, field: str | None = None, eq: str | None = None, user=Depends(current_user)):
