@@ -5,7 +5,7 @@ import sys
 app = Path(sys.argv[1] if len(sys.argv) > 1 else "migration/techmanz-build/app.html")
 s = app.read_text()
 
-date_block = r"""function a2Date(v){try{if(!v)return null;if(typeof v?.toDate==='function'){const d=v.toDate();return d instanceof Date&&!isNaN(d)?d:null}let raw=v?.__a2Timestamp??v;if(typeof raw?.toDate==='function')raw=raw.toDate();if(raw&&typeof raw==='object'&&raw._date)raw=raw._date;const d=raw instanceof Date?raw:new Date(raw);return d instanceof Date&&!isNaN(d)?d:null}catch{return null}}
+date_block = r"""function a2Date(v,depth=0){try{if(v===null||v===undefined||depth>5)return null;if(v instanceof Date)return isNaN(v)?null:v;if(typeof v?.toDate==='function')return a2Date(v.toDate(),depth+1);if(typeof v?.toMillis==='function')return a2Date(v.toMillis(),depth+1);if(typeof v==='string'||typeof v==='number'){const d=new Date(v);return d instanceof Date&&!isNaN(d)?d:null}if(typeof v==='object'){if(Object.prototype.hasOwnProperty.call(v,'__a2Timestamp'))return a2Date(v.__a2Timestamp,depth+1);if(v._date)return a2Date(v._date,depth+1);const sec=Number(v.seconds??v._seconds);if(Number.isFinite(sec)){const ns=Number(v.nanoseconds??v._nanoseconds??0),d=new Date(sec*1000+ns/1e6);return isNaN(d)?null:d}for(const k of ['value','date','iso','timestamp'])if(v[k]){const d=a2Date(v[k],depth+1);if(d)return d}}return null}catch{return null}}
 function expenseDate(x){const d=a2Date(x?.createdAt)||a2Date(x?.updatedAt);return d?d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric',timeZone:'Asia/Dubai'}):'Date not recorded'}
 function expenseAddedBy(x){return x?.createdByName||((x?.createdBy&&x.createdBy===auth.currentUser?.uid)?state.profile.name:'Admin / Chef')}
 function expenseDateKey(x){const t=a2Date(x?.createdAt)||a2Date(x?.updatedAt);return t?t.getTime():0}
@@ -85,7 +85,7 @@ if 'id="a2-techmanz-expense-parity"' not in s:
 # Mobile login must work directly from the rendered HTML, without waiting for
 # a post-render helper to mutate the fields.
 login_old = '<div class="field span2"><label>Email</label><input id=email type=email></div><div class="field span2"><label>Password</label><input id=pass type=password></div>'
-login_new = '<div class="field span2"><label for=email>Email</label><input id=email name=email type=email inputmode=email autocomplete=username autocapitalize=none spellcheck=false enterkeyhint=next></div><div class="field span2"><label for=pass>Password</label><input id=pass name=password type=password inputmode=text autocomplete=current-password enterkeyhint=go></div>'
+login_new = '<div class="field span2"><label for=email>Email</label><input id=email name=a2_login_email type=text inputmode=email autocomplete=off autocapitalize=none autocorrect=off spellcheck=false enterkeyhint=next virtualkeyboardpolicy=auto></div><div class="field span2"><label for=pass>Password</label><input id=pass name=a2_login_password type=password inputmode=text autocomplete=off autocapitalize=none autocorrect=off spellcheck=false enterkeyhint=go virtualkeyboardpolicy=auto></div>'
 if login_old not in s:
     raise SystemExit("Login field block not found")
 s = s.replace(login_old, login_new, 1)
@@ -117,7 +117,7 @@ app.write_text(s)
 sw = app.parent / "sw.js"
 if sw.exists():
     t = sw.read_text()
-    t, n = re.subn(r"const BUILD='[^']+'", "const BUILD='techmanz-mobile-input-v2-20260927'", t, count=1)
+    t, n = re.subn(r"const BUILD='[^']+'", "const BUILD='techmanz-mobile-input-v3-20260927'", t, count=1)
     if n != 1:
         raise SystemExit("Service-worker BUILD marker not found")
     sw.write_text(t)
