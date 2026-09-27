@@ -65,7 +65,17 @@ jobs:
           missing=[x for x in required if x not in s]
           if missing:
               raise SystemExit('Missing live feature markers: '+', '.join(missing))
-          print('Converted live feature markers validated')
+
+          # Full live-parity guard: every named function present in the exact
+          # generated GitHub Pages artifact must still exist after conversion.
+          import re
+          old=Path('migration/generated-live/app.html').read_text()
+          old_funcs=set(re.findall(r'function\\s+([A-Za-z0-9_$]+)\\s*\\(',old))
+          new_funcs=set(re.findall(r'function\\s+([A-Za-z0-9_$]+)\\s*\\(',s))
+          missing_funcs=sorted(old_funcs-new_funcs)
+          if missing_funcs:
+              raise SystemExit('Converted app lost live functions: '+', '.join(missing_funcs))
+          print(f'Converted live feature markers validated; {len(old_funcs)} live functions preserved')
           PY
           node --check /tmp/a2-techmanz-module.mjs
 
