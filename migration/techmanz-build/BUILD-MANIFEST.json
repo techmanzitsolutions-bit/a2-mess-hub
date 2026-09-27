@@ -3,13 +3,8 @@
   "files": [
     {
       "path": "app.html",
-      "sha256": "d6bf9b4763447742f20d2f2ff6ec6f277eea96e8624886d69009ed275b2e7a82",
-      "bytes": 134130
-    },
-    {
-      "path": "cloudinary-config.js",
-      "sha256": "e46ec7137d15dde9a10431788a4558e74ddce8be978a690355d747d041f7de1a",
-      "bytes": 196
+      "sha256": "2c52175860e1564ce3925269777593145675e786afbe1aa5febde19118f2086e",
+      "bytes": 135036
     },
     {
       "path": "index.html",
@@ -38,13 +33,13 @@
     },
     {
       "path": "sw.js",
-      "sha256": "32f03c54042c99e2d9a57bce767b4e7bb36e97730962e7edcd053d35a133e14d",
-      "bytes": 2037
+      "sha256": "9ccfe91b0f18c3c0e9cc4f1e75a145f5cba52cc1768e377694349e4a1510c8ef",
+      "bytes": 893
     },
     {
-      "path": "techmanz-adapter.js",
-      "sha256": "ce6bb7ece3934205d538225ed3c265ed42663361dff1da8caa8ff411c9d88f7d",
-      "bytes": 7220
+      "path": "techmanz-compat.js",
+      "sha256": "5272f5ded93824fb7506575fd705461c4b37d7b7e0a0e61c67003a389e4ea77c",
+      "bytes": 7177
     },
     {
       "path": "tm-solutions-approved.webp",
