@@ -15,6 +15,7 @@ permissions:
   contents: write
 
 jobs:
+  # mobile-input-v3 verification
   build:
     runs-on: ubuntu-latest
     steps:
