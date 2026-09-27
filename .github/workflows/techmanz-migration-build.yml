@@ -88,7 +88,7 @@ jobs:
           test -f migration/techmanz-build/input-hardening.js
           grep -q 'input-hardening.js' migration/techmanz-build/app.html
           grep -q 'inputmode=email' migration/techmanz-build/app.html
-          grep -q 'autocomplete=username' migration/techmanz-build/app.html
+          grep -q 'autocomplete=off' migration/techmanz-build/app.html
           grep -q 'a2-mobile-input-v2' migration/techmanz-build/app.html
           grep -q 'techmanz-final-ui-auth-20260927' migration/techmanz-build/sw.js
           echo "Migration build validation passed; TECH MANZ Local Build is the single writer for generated frontend artifacts."
