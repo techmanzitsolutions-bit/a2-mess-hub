@@ -144,7 +144,11 @@ rm -rf "$TMP"
 docker compose -f "$ROOT/web/compose.yml" up -d
 ok "Complete live-derived frontend installed"
 
-# Repair/reconcile historical payment month inference and member balances.
+# Repair authoritative expense timestamps from the final Firebase export,
+# then reconcile historical payment month inference and member balances.
+bash "$HERE/server/repair-expense-dates.sh"
+ok "Expense Added Date parity repaired"
+
 bash "$HERE/server/repair-payment-balance-parity.sh"
 ok "Payment and member balance parity repaired"
 
