@@ -132,7 +132,7 @@
     if(document.getElementById('a2-input-hardening-style')) return;
     var style=document.createElement('style');
     style.id='a2-input-hardening-style';
-    style.textContent='input:not([type=hidden]):not([type=file]),select,textarea{min-height:44px;touch-action:manipulation;caret-color:#59f3b0} .ref-search{min-height:46px} @media(max-width:900px){input:not([type=hidden]):not([type=file]),select,textarea{font-size:16px!important}}';
+    style.textContent='input:not([type=hidden]):not([type=file]),select,textarea{min-height:44px;caret-color:#59f3b0} input:not([type=hidden]):not([type=file]),textarea{touch-action:auto!important;-webkit-user-select:text!important;user-select:text!important} .ref-search{min-height:46px} @media(max-width:900px){input:not([type=hidden]):not([type=file]),select,textarea{font-size:16px!important}}';
     document.head.appendChild(style);
   }
 
@@ -141,6 +141,22 @@
     hardenInputs(document);
     installSearchFixes();
   }
+
+  function focusEditableFromGesture(event){
+    var el=event.target&&event.target.closest?event.target.closest('input[type="email"],input[type="password"],input[type="text"],input[type="tel"],input[type="number"],input[type="search"],textarea'):null;
+    if(!el||el.disabled||el.readOnly)return;
+    try{
+      if(document.activeElement!==el)el.focus({preventScroll:true});
+    }catch(e){
+      try{el.focus()}catch(_){}
+    }
+  }
+
+  // Android/PWA fallback: focus during the actual user gesture so the soft
+  // keyboard is allowed to open. No preventDefault is used, so native typing,
+  // selection and accessibility behavior are preserved.
+  document.addEventListener('pointerdown',focusEditableFromGesture,true);
+  document.addEventListener('click',focusEditableFromGesture,true);
 
   document.addEventListener('DOMContentLoaded',boot);
   window.addEventListener('load',boot);
