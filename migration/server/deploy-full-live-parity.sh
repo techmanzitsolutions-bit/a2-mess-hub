@@ -19,9 +19,22 @@ echo "============================================================"
 echo " A2 MESS HUB - COMPLETE LIVE APP PARITY DEPLOYMENT"
 echo "============================================================"
 
-[[ -d "$HERE/techmanz-build" ]] || fail "Validated TECH MANZ build missing"
 [[ -f "$HERE/generated-live/app.html" ]] || fail "Exact generated live reference missing"
+[[ -f "$HERE/scripts/convert_generated_live.py" ]] || fail "Frontend converter missing"
+[[ -f "$HERE/scripts/local-parity-hardening.py" ]] || fail "Parity hardening script missing"
 [[ -f "$HERE/server/repair-payment-balance-parity.sh" ]] || fail "Payment parity repair missing"
+[[ -f "$HERE/server/repair-expense-dates.sh" ]] || fail "Expense date repair missing"
+
+# Always regenerate the deployable frontend from the exact live baseline at
+# deployment time. This prevents stale generated artifacts or workflow races
+# from reintroducing old UI/runtime behavior.
+python3 "$HERE/scripts/convert_generated_live.py"   "$HERE/generated-live"   "$HERE/techmanz-build"   "$HERE/frontend/techmanz-compat.js"
+python3 "$HERE/scripts/local-parity-hardening.py" "$HERE/techmanz-build/app.html"
+
+grep -q 'input-hardening.js' "$HERE/techmanz-build/app.html" || fail "Input hardening missing from generated frontend"
+grep -q 'Added Date' "$HERE/techmanz-build/app.html" || fail "Expense Added Date column missing from generated frontend"
+grep -q 'techmanz-expense-date-20260927' "$HERE/techmanz-build/sw.js" || fail "Fresh service-worker cache marker missing"
+ok "Frontend regenerated from exact live baseline with latest parity fixes"
 
 mkdir -p "$BACKUP/app"
 cp -a "$ROOT/app/." "$BACKUP/app/"
