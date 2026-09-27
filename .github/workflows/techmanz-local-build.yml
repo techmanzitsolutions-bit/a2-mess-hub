@@ -90,7 +90,9 @@ jobs:
           test -f migration/techmanz-build/pwa.js
           test -f migration/techmanz-build/logo.svg
           test -f migration/techmanz-build/techmanz-compat.js
-          grep -q "techmanz-mobile-input-v3-20260927" migration/techmanz-build/sw.js
+          grep -q "techmanz-final-ui-auth-20260927" migration/techmanz-build/sw.js
+          ! grep -q 'Firestore user profiles' migration/techmanz-build/app.html
+          ! grep -q 'local authentication passwords are never included' migration/techmanz-build/app.html
           test ! -f migration/techmanz-build/cloudinary-config.js
 
       - name: Commit validated local build
