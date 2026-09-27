@@ -96,4 +96,13 @@ if missing:
     raise SystemExit("Parity hardening missing markers: " + ", ".join(missing))
 
 app.write_text(s)
+
+sw = app.parent / "sw.js"
+if sw.exists():
+    t = sw.read_text()
+    t, n = re.subn(r"const BUILD='[^']+'", "const BUILD='techmanz-full-parity-20260927'", t, count=1)
+    if n != 1:
+        raise SystemExit("Service-worker BUILD marker not found")
+    sw.write_text(t)
+
 print("TECH MANZ full live parity hardening applied")
