@@ -47,15 +47,10 @@ expense_fn = r"""function expenses(){
  </div>`
 }"""
 
-s, n = re.subn(
-    r"function expenses\\(\\)\\{.*?\\}\\n\\nwindow\\.expenseForm=",
-    expense_fn + "\n\nwindow.expenseForm=",
-    s,
-    count=1,
-    flags=re.S,
-)
-if n != 1:
-    raise SystemExit("Expense renderer not found")
+start = s.index("function expenses(){")
+end = s.index("\n\nwindow.expenseForm=", start)
+s = s[:start] + expense_fn + s[end:]
+
 
 old_select = '<select id=expenseMethod><option value="CASH">Cash</option><option value="CARD">Card</option></select>'
 new_select = '<select id=expenseMethod><option value="CASH" ${String(x.paymentMethod||\'CASH\').toUpperCase()===\'CASH\'?\'selected\':\'\'}>Cash</option><option value="CARD" ${String(x.paymentMethod||\'\').toUpperCase()===\'CARD\'?\'selected\':\'\'}>Card</option></select>'
