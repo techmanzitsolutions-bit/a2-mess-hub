@@ -40,6 +40,7 @@ jobs:
           PY
           node --check /tmp/a2-production-importer.js
           node --check migration/frontend/techmanz-compat.js
+          node --check migration/frontend/input-hardening.js
 
       - name: Build local TECH MANZ frontend
         run: |
@@ -88,7 +89,7 @@ jobs:
           test -f migration/techmanz-build/pwa.js
           test -f migration/techmanz-build/logo.svg
           test -f migration/techmanz-build/techmanz-compat.js
-          grep -q "techmanz-full-parity-20260927" migration/techmanz-build/sw.js
+          grep -q "techmanz-input-hardening-20260927" migration/techmanz-build/sw.js
           test ! -f migration/techmanz-build/cloudinary-config.js
 
       - name: Commit validated local build
