@@ -80,11 +80,10 @@ jobs:
           Path('migration/techmanz-build/BUILD-MANIFEST.json').write_text(json.dumps({'runtime':'TECH MANZ','files':files},indent=2)+'\n')
           PY
 
-      - name: Commit deterministic build
+      - name: Validate deterministic build handoff
         run: |
-          git config user.name "TECH MANZ Migration Bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add migration/techmanz-build
-          git diff --cached --quiet && exit 0
-          git commit -m "Build TECH MANZ server frontend"
-          git push origin HEAD:techmanz-server-consolidation
+          test -f migration/techmanz-build/app.html
+          test -f migration/techmanz-build/input-hardening.js
+          grep -q 'input-hardening.js' migration/techmanz-build/app.html
+          grep -q 'techmanz-input-hardening-20260927' migration/techmanz-build/sw.js
+          echo "Migration build validation passed; TECH MANZ Local Build is the single writer for generated frontend artifacts."
