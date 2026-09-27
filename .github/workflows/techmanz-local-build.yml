@@ -24,7 +24,7 @@ jobs:
 
       - name: Static validation
         run: |
-          python -m py_compile migration/server/compat_api.py migration/scripts/convert_generated_live.py
+          python -m py_compile migration/server/compat_api.py migration/scripts/convert_generated_live.py migration/scripts/local-parity-hardening.py
           bash -n migration/server/deploy-techmanz.sh migration/server/verify-techmanz-staging.sh migration/server/install-production-exporter.sh migration/server/remove-production-exporter.sh migration/server/install-production-importer.sh migration/server/remove-production-migration-pages.sh migration/server/final-production-preflight.sh migration/server/repair-production-bills-and-preflight.sh migration/server/public-tunnel-smoke-test.sh migration/server/install-permanent-cloudflare-tunnel.sh migration/server/setup-tailscale-funnel.sh migration/server/repair-payment-balance-parity.sh
           grep -q 'A2-MESS-HUB-PRODUCTION-EXPORT' migration/server/production-exporter.html
           grep -q 'signInWithEmailAndPassword' migration/server/production-exporter.html
@@ -44,6 +44,7 @@ jobs:
       - name: Build local TECH MANZ frontend
         run: |
           python migration/scripts/convert_generated_live.py
+          python migration/scripts/local-parity-hardening.py
 
       - name: Validate converted application
         run: |
@@ -59,7 +60,7 @@ jobs:
               'Total Receivable','PARTIAL','monthlyClosings','mealSkips',
               'Kitchen Meal Count','plan-choice','selectMemberPlan',
               '[100,200,250].includes(planAmount)','ACCOUNT_TRANSFER',
-              'tm-solutions-approved.webp','techmanz-compat.js'
+              'tm-solutions-approved.webp','techmanz-compat.js','Added Date','Added By / Actions','Date not recorded',"timeZone:'Asia/Dubai'"
           ]
           missing=[x for x in required if x not in s]
           if missing:
