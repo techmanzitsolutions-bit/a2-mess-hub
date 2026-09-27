@@ -6,7 +6,7 @@ out=Path(sys.argv[2] if len(sys.argv)>2 else 'migration/techmanz-build')
 adapter=Path(sys.argv[3] if len(sys.argv)>3 else 'migration/frontend/techmanz-compat.js')
 if out.exists(): shutil.rmtree(out)
 shutil.copytree(src,out)
-shutil.copy2(adapter,out/'techmanz-compat.js','input-hardening.js')
+shutil.copy2(adapter,out/'techmanz-compat.js')
 shutil.copy2(Path('migration/frontend/input-hardening.js'),out/'input-hardening.js')
 app=out/'app.html'; s=app.read_text()
 
