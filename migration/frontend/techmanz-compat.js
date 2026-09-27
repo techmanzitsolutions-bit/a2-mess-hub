@@ -10,6 +10,10 @@ class CompatTimestamp{
 
 function hydrate(v){
   if(Array.isArray(v))return v.map(hydrate);
+  if(v&&typeof v==='object'&&Object.keys(v).length===1&&v.__a2Timestamp){
+    const raw=v.__a2Timestamp instanceof CompatTimestamp?v.__a2Timestamp.toDate():v.__a2Timestamp;
+    const d=new Date(raw);if(!isNaN(d))return new CompatTimestamp(d)
+  }
   if(v&&typeof v==='object')return Object.fromEntries(Object.entries(v).map(([k,x])=>[k,hydrate(x)]));
   if(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(v)){const d=new Date(v);if(!isNaN(d))return new CompatTimestamp(d)}
   return v;
