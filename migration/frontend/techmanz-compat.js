@@ -97,8 +97,19 @@ export function onAuthStateChanged(auth,cb){
   const fn=u=>{auth.currentUser=u;cb(u)};listeners.add(fn);queueMicrotask(run);return()=>listeners.delete(fn)
 }
 export async function signInWithEmailAndPassword(auth,email,password){
-  const r=await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});
-  localStorage.setItem('a2_token',r.access_token);localStorage.setItem('a2_user',JSON.stringify(r.user));auth.currentUser={...r.user,uid:r.user.id};notifyAuth(auth.currentUser);return{user:auth.currentUser}
+  let r;
+  try{
+    r=await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});
+  }catch(e){
+    if(e?.code!=='server/401')throw e;
+    await api('/compat/auth/legacy-login',{method:'POST',body:JSON.stringify({email,password})});
+    r=await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});
+  }
+  localStorage.setItem('a2_token',r.access_token);
+  localStorage.setItem('a2_user',JSON.stringify(r.user));
+  auth.currentUser={...r.user,uid:r.user.id};
+  notifyAuth(auth.currentUser);
+  return{user:auth.currentUser}
 }
 export async function signOut(auth){if(auth?.name==='main'){localStorage.removeItem('a2_token');localStorage.removeItem('a2_user');auth.currentUser=null;notifyAuth(null)}else auth.currentUser=null}
 export async function createUserWithEmailAndPassword(auth,email,password){try{const r=await api('/compat/auth/create',{method:'POST',body:JSON.stringify({email,password,name:email.split('@')[0]})});auth.currentUser={uid:r.uid,email:r.email};return{user:auth.currentUser}}catch(e){if(e?.code==='server/409')e.code='auth/email-already-in-use';throw e}}
