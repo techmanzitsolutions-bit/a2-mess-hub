@@ -48,7 +48,7 @@ expense_fn = r"""function expenses(){
 }"""
 
 s, n = re.subn(
-    r"function expenses\(\)\{.*?\n\}\n\nwindow\.expenseForm=",
+    r"function expenses\\(\\)\\{.*?\\}\\n\\nwindow\\.expenseForm=",
     expense_fn + "\n\nwindow.expenseForm=",
     s,
     count=1,
