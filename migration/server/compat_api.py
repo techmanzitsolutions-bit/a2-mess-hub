@@ -278,6 +278,11 @@ def create_compat_router(db, current_user, allow_roles, hash_password):
     def legacy_login(req: LegacyLoginRequest):
         api_key = os.getenv("A2_LEGACY_FIREBASE_API_KEY", "").strip()
         if not api_key:
+            try:
+                api_key = Path("/run/secrets/legacy_firebase_api_key").read_text().strip()
+            except Exception:
+                api_key = ""
+        if not api_key:
             raise HTTPException(status_code=503, detail="Legacy login bridge is not configured")
         email = str(req.email).strip().lower()
         url = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + api_key
