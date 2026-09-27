@@ -70,8 +70,8 @@ jobs:
           # generated GitHub Pages artifact must still exist after conversion.
           import re
           old=Path('migration/generated-live/app.html').read_text()
-          old_funcs=set(re.findall(r'function\\s+([A-Za-z0-9_$]+)\\s*\\(',old))
-          new_funcs=set(re.findall(r'function\\s+([A-Za-z0-9_$]+)\\s*\\(',s))
+          old_funcs=set(re.findall(r'function\s+([A-Za-z0-9_$]+)\s*\(',old))
+          new_funcs=set(re.findall(r'function\s+([A-Za-z0-9_$]+)\s*\(',s))
           missing_funcs=sorted(old_funcs-new_funcs)
           if missing_funcs:
               raise SystemExit('Converted app lost live functions: '+', '.join(missing_funcs))
