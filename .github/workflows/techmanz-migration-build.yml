@@ -1,0 +1,94 @@
+name: TECH MANZ Migration Build
+
+on:
+  push:
+    branches: [ techmanz-server-consolidation ]
+    paths:
+      - 'migration/server/**'
+      - 'migration/scripts/**'
+      - 'migration/generated-live/**'
+      - '.github/workflows/techmanz-migration-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate Python migration modules
+        run: |
+          python -m py_compile migration/server/api/live_compat.py
+          python -m py_compile migration/server/api/live_compat_ext.py
+          python -m py_compile migration/scripts/convert_generated_live.py migration/scripts/local-parity-hardening.py
+
+      - name: Build server frontend from exact generated live baseline
+        run: |
+          python migration/scripts/convert_generated_live.py
+          python migration/scripts/local-parity-hardening.py
+
+      - name: Validate generated module JavaScript
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('migration/techmanz-build/app.html').read_text()
+          marker='<script type="module">'
+          a=s.find(marker); b=s.find('</script>',a+len(marker))
+          if a<0 or b<0: raise SystemExit('module script missing')
+          Path('/tmp/a2-techmanz-check.mjs').write_text(s[a+len(marker):b])
+          required=[
+            'Total Receivable','PARTIAL','monthlyClosings','mealSkips',
+            'Kitchen Meal Count','plan-choice','selectMemberPlan',
+            '[100,200,250].includes(planAmount)','ACCOUNT_TRANSFER',
+            'a2-live-notifications','tm-solutions-approved.webp','Added Date','Added By / Actions','Date not recorded',"timeZone:'Asia/Dubai'"
+          ]
+          missing=[x for x in required if x not in s]
+          if missing: raise SystemExit('Missing live features: '+', '.join(missing))
+          forbidden=['gstatic.com/firebasejs','api.cloudinary.com/v1_1','ucarecdn.com','firebase.initializeApp','firebase.messaging()']
+          bad=[x for x in forbidden if x in s]
+          if bad: raise SystemExit('External runtime dependency remains: '+', '.join(bad))
+          print('Frontend parity markers passed')
+          PY
+          node --check /tmp/a2-techmanz-check.mjs
+          node --check migration/techmanz-build/techmanz-compat.js
+          node --check migration/techmanz-build/input-hardening.js
+          grep -q "techmanz-final-ui-auth-20260927" migration/techmanz-build/sw.js
+          ! grep -q 'Firestore user profiles' migration/techmanz-build/app.html
+          ! grep -q 'local authentication passwords are never included' migration/techmanz-build/app.html
+
+      - name: Validate SQL migration contract
+        run: |
+          grep -q "010_live_parity" migration/server/sql/010_live_parity.sql
+          grep -q "member_month_plans" migration/server/sql/010_live_parity.sql
+          grep -q "member_month_carry" migration/server/sql/010_live_parity.sql
+          grep -q "billing_month" migration/server/sql/010_live_parity.sql
+          grep -q "member_snapshot" migration/server/sql/010_live_parity.sql
+
+      - name: Record build manifest
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+          root=Path('migration/techmanz-build')
+          files=[]
+          for p in sorted(x for x in root.rglob('*') if x.is_file()):
+              b=p.read_bytes()
+              files.append({'path':str(p.relative_to(root)),'sha256':hashlib.sha256(b).hexdigest(),'bytes':len(b)})
+          Path('migration/techmanz-build/BUILD-MANIFEST.json').write_text(json.dumps({'runtime':'TECH MANZ','files':files},indent=2)+'\n')
+          PY
+
+      - name: Validate deterministic build handoff
+        run: |
+          test -f migration/techmanz-build/app.html
+          test -f migration/techmanz-build/input-hardening.js
+          grep -q 'input-hardening.js' migration/techmanz-build/app.html
+          grep -q 'inputmode=email' migration/techmanz-build/app.html
+          grep -q 'autocomplete=off' migration/techmanz-build/app.html
+          grep -q 'a2-mobile-input-v2' migration/techmanz-build/app.html
+          grep -q 'techmanz-final-ui-auth-20260927' migration/techmanz-build/sw.js
+          echo "Migration build validation passed; TECH MANZ Local Build is the single writer for generated frontend artifacts."
